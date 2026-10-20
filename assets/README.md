@@ -1,32 +1,27 @@
-# Afbeeldingen en geluiden
+# FNAF Desktop Chaos 2.0 — media
 
-De PNGs in deze map zijn speciaal voor dit project gegenereerde gedetailleerde fanillustraties. `character_atlas.png` bevat de bronillustraties; de transparante sprites en zes camerabeelden zijn daaruit opgebouwd. Er zijn geen originele game-assets gedownload. De scripts en deze placeholderbeelden/-geluiden mogen vrij worden aangepast voor dit project; de FNAF-personages en merknamen blijven eigendom van hun respectieve rechthebbenden.
+Meegeleverd: gegenereerde fanillustraties, een transparante personage-atlas, 54 PNG-animatie-/gezichtsbestanden, zes camerakaarten, een nieuw donker Golden Freddy-gezicht en synthetische audio. Er zijn geen originele game-opnamen gedownload. Voeg zelf alleen media toe die je mag gebruiken.
 
-Per personage een map:
+## Eigen afbeeldingen
 
-- `freddy/`
-- `bonnie/`
-- `chica/`
-- `foxy/`
-- `golden_freddy/`
-- `springtrap/`
+- `images/random/` en `images/memes/`: PNG, JPG/JPEG, WEBP. Worden automatisch ontdekt, ook in submappen.
+- `popups/`: de bestaande zes camerakaarten blijven ondersteund als standaardbeelden.
+- `images/characters/`: `freddy.png`, `bonnie.png`, `chica.png`, `foxy.png`, `golden_freddy.png`, `springtrap.png` (ook JPG/WEBP). Vervangt de meegeleverde loopillustratie met een wieganimatie.
+- Bestaande per-personage mappen met `walk_00.png`, `walk_01.png`, enzovoort blijven werken; alle frames moeten hetzelfde canvas hebben. `scare.png` is het fallbackgezicht.
+- `images/golden_freddy/golden_freddy_flicker.png`: vervangen door je eigen Golden-referentie.
 
-Voeg transparante `walk_00.png`, `walk_01.png`, enzovoort toe. Frames worden alfabetisch afgespeeld en naar 110×150 geschaald; gebruik voor alle frames hetzelfde canvas. Het klikmasker volgt het eerste frame. Optioneel vervangt `scare.png` de jumpscaretekening; dit beeld krijgt een zoom- en wieganimatie. Ontbrekende of onleesbare beelden vallen terug op de vectorillustratie.
+Nieuwe draagbare beelden worden elke tien seconden gevonden. Voor aangepaste personages: Toepassen of app opnieuw starten. Afbeeldingen worden alleen in tijdelijke vensters getoond; je bestanden worden niet verplaatst, gewijzigd of verwijderd.
 
-Optionele WAV-bestanden direct in `assets/`:
+## Originele jumpscares
 
-- `freddy.wav`: Freddy's korte omgevingsgeluid.
-- `freddy_scare.wav`, `bonnie_scare.wav`, `chica_scare.wav`, `foxy_scare.wav`, `golden_freddy_scare.wav`, `springtrap_scare.wav`: jumpscares.
-- `scare.wav`: geluid voor de knop Volume testen.
+Per personage: `images/jumpscares/freddy/`, `bonnie/`, `chica/`, `foxy/`, `golden_freddy/`, `springtrap/`.
 
-Gebruik PCM-WAV, bijvoorbeeld mono 16-bit 22050 Hz. Zonder eigen audio genereert de app korte zachte synthetische geluiden in zijn eigen instellingenmap. Langere aangepaste jumpscaregeluiden worden bij het sluiten van de overlay gestopt.
+Plaats daar `jumpscare.mp4` of `jumpscare.webm`, of een reeks `frame_000.png`, `frame_001.png`, enzovoort. Video heeft voorrang. Frames worden op 30 fps afgespeeld, maximaal 120, met een begrensde laadresolutie. Clips worden na maximaal circa tien seconden afgebroken. Ontbrekende media gebruiken de bestaande geanimeerde illustratie.
 
-Genereer de originele placeholders opnieuw met `python tools/generate_assets.py` vanuit de projectmap (dit overschrijft bestaande sprites). Voeg alleen bestanden toe die je mag gebruiken.
+Eigen audio gaat in `audio/`; zie [audio/README.md](audio/README.md) voor exacte namen. Deze bestanden hebben voorrang op de standaard-WAVs in de assets-hoofdmap. Een eigen video speelt zijn ingebouwde geluid, tenzij er een bijbehorende expliciete `*_scare.wav`-override in `audio/` staat. Het veilige appvolume en de stiltemodus gelden altijd.
 
-## Nieuwe meegeleverde bestanden
+De meegeleverde synthetische geluiden horen bij ieder personage maar zijn geen originele FNAF-opnamen. Kies in Custom Night een personage en klik Volume testen. Voor echte media moet je zelf bestanden toevoegen.
 
-- `popups/*.png`: zes FNAF-camerabeelden voor willekeurige afbeeldingsvensters. Voeg eigen PNGs toe en herstart de app. De beelden openen in de app zelf en verdwijnen automatisch.
-- Alle zes `*_scare.wav` zijn aanwezig: originele synthetische geluiden met verschillende toonhoogte, metaal- en ruisklanken per personage; geen originele game-opnamen.
-- `freddy.wav` is een korte synthetische lach.
+## Generators voor ontwikkeling
 
-`python tools/generate_assets.py` bouwt PNGs opnieuw uit de meegeleverde atlas. `python tools/generate_sounds.py` bouwt de eigen WAVs opnieuw. Beide overschrijven alleen de bijbehorende bestanden in assets; gebruik ze niet als je eigen vervangende assets wilt bewaren.
+`python tools/generate_assets.py` bouwt de bestaande sprites/camerakaarten uit `character_atlas.png`. `python tools/generate_sounds.py` bouwt de synthetische standaard-WAVs. Deze overschrijven hun eigen standaardbestanden; gebruik ze niet als je die bestanden handmatig hebt vervangen. In een gebouwde app staat deze hele map onder `_internal/assets`.

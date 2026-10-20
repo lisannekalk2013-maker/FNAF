@@ -1,120 +1,116 @@
-# FNAF Desktop
+# FNAF Desktop Chaos 2.0
 
-Een zichtbare Python-desktopapp voor Windows 10/11 met zes geanimeerde desktopmaatjes. Alleen gebruiken op een computer waarvan de eigenaar toestemming heeft gegeven. Dit is een onofficieel fanproject; de meegeleverde tekeningen en synthetische geluiden zijn zelfgemaakt, geen bestanden uit de games.
+Uitbreiding van de bestaande Windows 11-app: zes desktopmaatjes lopen rond, halen afbeeldingen van de schermrand, slepen ze mee, leggen ze neer en kunnen elkaars afbeeldingen stelen. Alle afbeeldingen zijn eigen tijdelijke vensters: er worden geen echte bestanden, muiscursor, bureaubladpictogrammen, taakbalkinstellingen of monitoren verplaatst/aangepast.
 
-## Project downloaden
+Gebruik uitsluitend op een computer waarvan de eigenaar toestemming heeft gegeven. Dit is een onofficieel fanproject. De meegeleverde illustraties zijn gegenereerde fanillustraties, de geluiden zijn eigen synthetische placeholders. Originele game-opnamen en de afzonderlijke Golden Freddy-referentie van de gebruiker zijn niet meegeleverd.
 
-Download de bijgewerkte broncode via [downloads/FNAF-project.zip](downloads/FNAF-project.zip) op GitHub (klik op **Download raw file** bij het bestand). Of kies op de hoofdpagina **Code → Download ZIP**. Bouw daarna een nieuwe EXE: een eerder gedownload EXE-artifact bevat deze wijzigingen nog niet.
+## De Windows-versie downloaden
 
-## Starten op Windows
+1. Open [Actions → Build Windows EXE](https://github.com/lisannekalk2013-maker/FNAF/actions/workflows/windows-exe.yml).
+2. Open de nieuwste uitvoering voor branch `main`. Nieuwe pushes naar `main` starten automatisch een build. Handmatig starten kan met **Run workflow → main → Run workflow**.
+3. Wacht tot de uitvoering groen is. De build voert tests uit, bouwt de EXE en start deze kort in stille testmodus.
+4. Klik bij **Artifacts** op **FNAFDesktop-Windows**. GitHub vereist hiervoor dat je bent ingelogd.
+5. Pak de ZIP volledig uit en open **FNAFDesktop.exe**. Bewaar `_internal` en de andere bestanden erbij. Je hebt voor deze EXE geen Python nodig.
 
-Installeer Python 3.13 (64-bit), open een terminal in deze map en voer uit:
+Het tweede artifact **FNAFDesktop-Chaos-2.0-Windows-ZIP** bevat de apart gemaakte complete Windows-ZIP. Na het downloaden hiervan zit de Windows-ZIP in de artifact-ZIP.
+
+De [ZIP onder downloads/](downloads/FNAF-project.zip) bevat **broncode**, geen vooraf gebouwde Windows-EXE. Als een workflow rood is, open de mislukte stap voor de foutmelding; de ZIP wordt alleen als artifact aangeboden na een geslaagde build en EXE-smoketest. Een geslaagde offscreen-buildtest bevestigt nog niet alle fysieke Windows-desktopfuncties.
+
+## Afsluiten en pauzeren
+
+- **Escape indrukken:** jumpscare of speciaal effect onmiddellijk onderbreken.
+- **Escape vijf seconden onafgebroken vasthouden:** hele app afsluiten, ook tijdens pauze of een jumpscare. Loslaten zet de teller terug.
+- **Ctrl+Shift+Q:** tweede globale Windows-noodstop.
+- **Systeemvak → Afsluiten:** sluit alles, inclusief geluid en tijdelijke afbeeldingsvensters.
+
+Op Windows wordt uitsluitend de Escape-toets passief opgevraagd; er worden geen andere toetsen vastgelegd of geblokkeerd. Op Linux werkt Escape alleen met toetsenbordfocus bij de app. Kan Windows Ctrl+Shift+Q niet registreren, dan blijven jumpscares uitgeschakeld. Bij afsluiten stoppen timers en audio en worden alle overlays gesloten. Er zijn geen losse helperprocessen voor afbeeldingen.
+
+In het systeemvak kun je pauzeren/hervatten, Custom Night openen, direct een afbeelding tonen, alle afbeeldingen opruimen en personages tijdelijk verbergen. Pauzeren bevriest beweging, taken en afbeeldingstimers en verbergt de afbeeldingen. Speciale effecten en geluid stoppen. Verbergen laat afbeeldingen liggen en laat personages hun afbeeldingen loslaten.
+
+## Afbeeldingen meeslepen en stelen
+
+Een personage loopt naar de schermrand, mag gedeeltelijk buiten beeld komen en keert terug met een afbeelding aan zijn hand. Het beeld volgt met een lichte vertraging en wiegt tijdens het lopen. Aan de bestemming laat het personage het beeld los; na de ingestelde levensduur verdwijnt het. Het kruisje sluit een afbeelding meteen, ook als iemand hem draagt.
+
+- **Foxy:** hoogste kans op stelen, sprint met buit, kan onderweg iets laten vallen en zelden direct uit iemands handen stelen.
+- **Freddy:** rustig transport; heeft voorkeur voor eigen afbeeldingen en kan Foxy achtervolgen om die terug te halen.
+- **Bonnie:** onderzoekt eerst en besluit daarna of hij iets meeneemt.
+- **Chica:** heeft voorkeur voor bestandsnamen met `chica`, `cupcake`, `food` of `pizza`; laat ook cupcakeberichten achter.
+- **Golden Freddy:** loopt niet permanent rond, verschijnt zelden bij de cursor en laat afbeeldingen glitchend verdwijnen en op een andere plek terugkomen.
+- **Springtrap:** blijft als extra zesde personage beschikbaar en beweegt langzaam.
+
+Slechts één personage kan een afbeelding vasthouden. Tijdens een kort visueel trekspel blijft er één logische eigenaar; daarna wordt het eigendom in één stap overgedragen. Personages kunnen elkaars achtergelaten afbeeldingen opzoeken of hun eigen beeld opnieuw meenemen. Afsluiten, opruimen, een beeld handmatig sluiten en monitorwisselingen ruimen ook de bijbehorende taken op. De beelden nemen de toetsenbordfocus niet over; alleen hun eigen venster vangt muisklikken op.
+
+## Custom Night en config.json
+
+Bij starten opent altijd het instellingenvenster. Per personage kun je selectie en activiteit **0–20** instellen. Activiteit 0 schakelt hem uit; hogere waarden verhogen de frequentie van acties binnen de limieten. Stel verder in:
+
+- Aantal personages, bewegings- en animatiesnelheid, FPS (15–60).
+- Kans op losse afbeeldingen, frequentie meeslepen, kans op stelen en achtervolgen.
+- Maximum afbeeldingen (1–12), levensduur na neerleggen (10–300 seconden).
+- Speciale gebeurtenissen, verminderde lichteffecten en Golden Freddy-ontmoetingsinterval.
+- Jumpscares, fullscreen of kleiner venster, cooldown (2–60 seconden).
+- Jumpscarevolume, apart omgevingsvolume, volledig stil, rustige of chaosmodus.
+
+Klik **Toepassen en opslaan**. Je persoonlijke configuratie staat in `%LOCALAPPDATA%\FNAFDesktop\config.json`. Bestaande persoonlijke `settings.json`-waarden worden overgenomen zolang er nog geen `config.json` is. Het oude bestand blijft bestaan. `config.json` in deze projectmap is alleen het standaardvoorbeeld; het wijzigen ervan overschrijft bestaande persoonlijke instellingen niet. Ongeldige configuratiewaarden worden begrensd; bij onleesbare JSON worden standaardwaarden gebruikt.
+
+Opstarten met Windows en systeemvolumebegrenzing blijven standaard uit. Opstarten inschakelen vraagt apart toestemming en schrijft uitsluitend de eigen waarde `FNAFDesktop` onder `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Uitzetten verwijdert alleen die waarde. Zet het uit voordat je de app verplaatst of verwijdert.
+
+## Speciale gebeurtenissen en Golden Freddy
+
+De eventmanager laat hoogstens één speciaal effect tegelijk actief zijn: cameraruis, IT'S ME, Freddy's lach, Foxy-sprint, een korte gesimuleerde blackout, taakbalk-overlay, gezamenlijk staren, afbeeldingsdiefstal of Golden Freddy-hallucinatie. De echte monitor en taakbalk blijven ongewijzigd. Verminderde lichteffecten staan standaard aan; er zijn geen snelle stroboscoopflitsen.
+
+Golden Freddy's aparte gezicht staat in `assets/images/golden_freddy/golden_freddy_flicker.png`. Een zeldzame ontmoeting pauzeert de figuren kort, toont het gezicht met IT'S ME en een glitchgeluid en hervat daarna alles. Standaard wordt de volgende ontmoeting gekozen tussen ongeveer 15 en 29 minuten (gemiddeld 22 minuten actieve looptijd). Pauze en jumpscares tellen hiervoor niet mee. Kortere Golden-flickers zijn afzonderlijke willekeurige effecten. Zet zijn activiteit op 0 of deselecteer hem om Golden-events uit te schakelen.
+
+## Originele/eigen media toevoegen
+
+De bestaande meegeleverde assets blijven als fallback werken. Voeg eigen bestanden toe waarvoor je gebruiksrechten hebt. Bij een gebouwde EXE staat `assets` onder `_internal/assets`.
+
+```text
+assets/images/random/                 PNG, JPG/JPEG, WEBP voor losse/draagbare beelden
+assets/images/memes/                  extra memes in dezelfde formaten
+assets/images/characters/             optionele freddy.png, bonnie.png, enz.
+assets/images/jumpscares/freddy/       jumpscare.mp4 of jumpscare.webm
+                                     OF frame_000.png, frame_001.png, enz.
+assets/images/jumpscares/bonnie/       dezelfde namen, eigen media
+assets/images/jumpscares/chica/
+assets/images/jumpscares/foxy/
+assets/images/jumpscares/golden_freddy/
+assets/images/jumpscares/springtrap/
+assets/images/golden_freddy/           golden_freddy_flicker.png (vervangbaar)
+assets/audio/                         eigen PCM-WAVs
+```
+
+Afbeeldingen worden elke tien seconden opnieuw ontdekt; klik Toepassen of herstart voor gewijzigde personages. Frames worden op 30 fps afgespeeld, maximaal 120 frames van maximaal 512 pixels bij het inladen. Video heeft voorrang op frames; zonder eigen animatie gebruikt de app het bestaande gezicht met een per personage verschillend bewegingsritme. Clips worden na maximaal circa tien seconden afgebroken.
+
+Audio in `assets/audio/` heeft voorrang op de synthetische standaardbestanden:
+
+- `freddy_scare.wav`, `bonnie_scare.wav`, `chica_scare.wav`, `foxy_scare.wav`, `golden_freddy_scare.wav`, `springtrap_scare.wav`.
+- `freddy.wav` (lach), `foxy_sprint.wav`, `camera_static.wav`, `golden_glitch.wav`, `theft.wav`, `ambient.wav`, `chica.wav`.
+
+Een eigen video gebruikt zijn ingebouwde audio als er geen expliciete bijbehorende WAV in `assets/audio/` staat. Bij een WAV-override wordt videogeluid onderdrukt. Bij meerdere monitoren wordt geluid slechts één keer gestart. Tijdens een jumpscare stoppen andere geluiden. Volume testen kiest het personage afzonderlijk. Stille modus geldt ook voor video. Ontbrekende of onleesbare beelden worden overgeslagen of vallen terug op een placeholder; beschadigde video valt terug op de stilstaande illustratie.
+
+Appvolume is standaard 15% voor jumpscares en 8% voor andere geluiden, maximaal 50%. Dit bepaalt niet de fysieke geluidsdruk: test eerst zacht. De optionele systeemvolumebegrenzing geldt voor WAV-afspelen en verlaagt alleen; zij herstelt het oorspronkelijke endpointvolume na afspelen, fouten, pauze en normaal afsluiten. Ingebouwde videoaudio wordt alleen op appniveau begrensd. Geforceerd beëindigen, stroomuitval of het verdwijnen van een audioapparaat kan systeemvolumeherstel verhinderen; laat de systeemoptie uit voor uitsluitend appvolume.
+
+## Starten en bouwen met Python 3.13
+
+Gebruik Python 3.13 **64-bit** op Windows 11. Voor ontwikkelen:
 
 ```powershell
 py -3.13 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 .venv\Scripts\python.exe run.py
-```
-
-Bij het starten opent altijd het instellingenvenster. Selecteer personages, stel hun aantal en snelheid in en klik **Instellingen toepassen**. Sluit het venster om de maatjes op het bureaublad te laten lopen. Met rechtsklikken op een personage of het systeemvakpictogram open je het menu. Zonder systeemvak blijft het instellingenvenster beschikbaar.
-
-**Stoppen:** houd **Escape onafgebroken 5 seconden** ingedrukt (op Windows ook wanneer een andere app actief is), of gebruik Ctrl+Shift+Q (globaal op Windows), het systeemvakmenu of de knop Afsluiten. Kan Windows de sneltoets niet registreren, dan blijven jumpscares uit. De Escape-teller blijft actief tijdens pauze en jumpscares. Loslaten vóór vijf seconden zet de teller terug. Bij afsluiten stoppen timers, audio, personages en afbeeldingsvensters; het proces eindigt. Buiten Windows werkt Escape alleen zolang de app toetsenbordfocus heeft. Er is geen installatie op de achtergrond en geen toetsenbord- of muisvergrendeling.
-
-## Gedrag
-
-- Freddy loopt rustig en speelt soms een kort synthetisch geluid (vervangbaar door een eigen lach).
-- Bonnie volgt of wacht bij de cursor totdat die beweegt.
-- Chica laat kort een cupcakebericht achter.
-- Foxy loopt sneller en trekt af en toe een sprint.
-- Golden Freddy verdwijnt tijdelijk en verschijnt opnieuw bij de schermrand.
-- Springtrap loopt traag en verdwijnt en verschijnt onverwacht. Het programma verplaatst of inspecteert geen vensters van andere apps; er is geen gegarandeerd verstoppen achter een specifiek venster.
-
-Personages worden verdeeld over de aangesloten monitoren, gebruiken de beschikbare schermruimte en passen zich aan bij het aansluiten of verwijderen van monitoren. Alleen het zichtbare spritegebied vangt klikken op. Bewegingsframes worden circa 30 keer per seconde bijgewerkt; er is geen drukke pollinglus.
-
-Links klikken start één jumpscare: alle personages stoppen, alle monitoren worden 0,2 seconden donker, daarna volgt een geanimeerde zoom met geluid. Na in totaal circa 1,7 seconden verdwijnen de overlays en hervat de beweging. De overlay vraagt geen exclusieve fullscreenmodus en laat muisklikken door. Een geopende app of het systeem kan topmost-vensters soms overdekken.
-
-Rustige modus vertraagt de beweging, verlaagt de gebeurteniskans en schakelt jumpscares uit. Chaosmodus verhoogt de gebeurteniskans. Pauzeren via het menu stopt geluid en jumpscares en verbergt de personages.
-
-## Willekeurige afbeeldingsvensters
-
-Net zoals bij Desktop Goose verschijnen af en toe afzonderlijke afbeeldingsvensters: zes FNAF-camerabeelden staan in `assets/popups/`. Ze openen zonder de toetsenbordfocus over te nemen, zijn te sluiten met de knop of het kruisje en verdwijnen na 12 seconden. Er staan maximaal drie pop-upvensters tegelijk open. Tijdens jumpscares of pauze worden geen nieuwe afbeeldingen geopend. Via het systeemvakmenu **FNAF-afbeelding tonen** kun je ze direct bekijken.
-
-Zet **Willekeurige FNAF-afbeeldingen** uit om automatische afbeeldingen uit te schakelen. De gebeurteniskans en rustige/chaosmodus beïnvloeden de frequentie. Voeg zelf PNG-bestanden aan `assets/popups/` toe en herstart de app om ze te gebruiken. De app opent geen externe afbeeldingsprogramma’s en schrijft deze beelden niet op je bureaublad.
-
-## Geluid en systeemvolume
-
-De standaard geluidssterkte van de app is 15%, instelbaar tussen 0 en 50%. Dit is geen garantie over fysieke geluidsdruk: gebruik eerst **Volume testen** op een laag niveau. Volledig stil schakelt alle appgeluiden uit. Er is één audiokanaal, dus geluiden overlappen niet. Elk van de zes personages heeft een eigen meegeleverd jumpscare-WAV-bestand; kies een personage boven **Volume testen** om dit apart te horen. Dit zijn originele, synthetische varianten passend bij de personages, geen opnamen uit de games. Freddy heeft ook een eigen synthetisch lachgeluid.
-
-De optionele Windows-volumebegrenzing staat standaard uit. Indien ingeschakeld leest de app het oorspronkelijke volume van het standaard audioapparaat, verlaagt het uitsluitend indien nodig en herstelt het na afspelen, bij pauzeren, fouten en normaal afsluiten. De mute-instelling wordt niet gewijzigd. Als de Windows-audio-API niet beschikbaar is, wordt de betreffende afspeelpoging afgebroken. Een geforceerde procesbeëindiging of stroomuitval kan herstel verhinderen; laat de optie uit als je uitsluitend het appvolume wilt aanpassen. Verander tijdens een jumpscare bij voorkeur niet het standaard audioapparaat.
-
-## Instellingen en opstarten
-
-Instellingen en gegenereerde WAV-bestanden staan uitsluitend in `%LOCALAPPDATA%\FNAFDesktop` (op Linux in `~/.config/FNAFDesktop`). `settings.json` in deze projectmap toont de standaardwaarden; persoonlijke instellingen worden bij de eerste toepassing opgeslagen. Een beschadigd instellingenbestand valt terug op veilige standaardwaarden.
-
-Opstarten met Windows staat standaard uit. Aanzetten vraagt een afzonderlijke bevestiging en schrijft alleen de eigen `FNAFDesktop`-waarde onder `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Uitzetten verwijdert die waarde. Verplaats de app daarna niet zonder deze optie opnieuw in te stellen. Zet de optie uit voordat je de projectmap of EXE verwijdert. Er worden geen andere registerwaarden gewijzigd.
-
-## Eigen assets toevoegen
-
-Zie [assets/README.md](assets/README.md). De meegeleverde 54 PNGs gebruiken gedetailleerde, gegenereerde 3D-fanillustraties met transparante achtergrond en een wiegende loopanimatie. De bronafbeelding staat in `assets/character_atlas.png`. Animatie en gedrag werken ook zonder assets dankzij de vectorfallback. Voor productie kun je gedetailleerdere sprites toevoegen waarvoor je gebruiksrechten hebt.
-
-## Tests
-
-```powershell
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-De 20 tests gebruiken de offscreen Qt-backend: instellingen, volumebegrenzing en herstel met een nep-audioapparaat, alle zes personages, echte Qt-muisklikken, niet-overlappende jumpscares, automatische afloop, pauzeren en stille modus. Extra tests controleren de unieke WAVs, afbeeldingsvensters, continu vijf seconden Escape vasthouden en het afsluiten van een echt subprocess. Ze spelen geen geluid af en wijzigen geen Windows-opstartinstellingen.
+Zonder opdrachten: dubbelklik **build_windows.bat**. Het script gebruikt een aparte `.venv-windows`, installeert dependencies, voert de tests uit en bouwt PyInstaller onedir. Resultaat:
 
-Een korte GUI-smoketest is ook beschikbaar:
+- `dist\FNAFDesktop\FNAFDesktop.exe` met `_internal` en startinstructies.
+- `dist\FNAFDesktop-Chaos-2.0-Windows.zip`: de volledige Windows-map, geverifieerd op verplichte bestanden.
 
-```powershell
-.venv\Scripts\python.exe run.py --smoke
-```
+Er zijn geen administratorrechten nodig. De build is niet ondertekend: schakel beveiliging niet uit. Een Windows-EXE wordt op Windows gebouwd, niet op de Linux-cloudmachine.
 
-Deze stopt automatisch na enkele seconden en gebruikt stille modus. De smoketest gebruikt tijdelijk alleen Freddy en controleert een volledige jumpscarecyclus; persoonlijke instellingen worden niet gewijzigd.
+## Validatie en grenzen
 
-Controleer op een echte Windows-desktop aanvullend: globale sneltoets vanuit een andere app, systeemvak, hoorbare volumetest, herstel van systeemvolume, twee monitoren met verschillende DPI, en expliciet aan/uitzetten van automatisch opstarten. Linux/offscreen-tests bevestigen deze Windows-integratie niet.
+De regressietests controleren beweging, vloeiend fetchgedrag, eigendom, stelen, Foxy/Freddy-achtervolging, Bonnie/Chica-voorkeuren, glitch-herstel, beeldlimieten en opruimen, speciale gebeurtenissen, cooldown, media-overrides, Custom Night, legacyconfig-migratie, pauze en echte procesafsluiting. Er is ook een stille GUI-smoketest: `python run.py --smoke`. Zie [VALIDATIE.md](VALIDATIE.md) voor daadwerkelijk uitgevoerde controles.
 
-## Windows-EXE bouwen
-
-Dubbelklik op `build_windows.bat` op Windows met Python 3.13. Het script gebruikt Python 3.13, maakt een aparte `.venv-windows`, installeert dependencies, voert de tests uit en bouwt met PyInstaller. Je hoeft hiervoor geen Python-opdrachten in te voeren. Het venster blijft open zodat je eventuele fouten kunt lezen. Er is geen administratoraccount nodig.
-
-Resultaat: `dist\FNAFDesktop\FNAFDesktop.exe`. Bewaar en verspreid de **hele** map `FNAFDesktop`, inclusief `_internal`, niet alleen het EXE-bestand. De build is niet ondertekend; schakel Windows-beveiliging niet uit. Een Windows-EXE moet op Windows worden gebouwd; de Linux-cloudmachine bouwt deze niet.
-
-## EXE downloaden via GitHub (zonder lokale Python-opdrachten)
-
-1. Open je repository op GitHub en klik op **Actions**.
-2. Als GitHub vraagt workflows toe te staan, klik **I understand my workflows, go ahead and enable them**.
-3. Kies links **Build Windows EXE**.
-4. Klik rechts op **Run workflow**, kies de gepubliceerde branch en klik op de groene **Run workflow**-knop.
-5. Open de nieuwe run en wacht tot die groen is.
-6. Klik onder **Artifacts** op **FNAFDesktop-Windows** om de ZIP te downloaden. Je moet bij GitHub ingelogd zijn.
-7. Pak alles uit en dubbelklik op `FNAFDesktop.exe`. Bewaar `_internal` erbij.
-
-Deze workflow wordt alleen handmatig gestart en publiceert geen release. Als GitHub Actions voor je account is uitgeschakeld of niet beschikbaar is, gebruik lokaal `build_windows.bat`. Een geslaagde build vervangt niet de controle van de echte Windows-desktopfuncties.
-
-## Projectstructuur
-
-```text
-run.py                   startpunt
-fnaf_desktop/
-  app.py                 vensters, animatie, instellingen, systeemvak, sneltoets
-  audio.py               één audiokanaal, synthetisch geluid, Windows-audio
-  core.py                instellingen, Escape-teller en volumebegrenzing
-  emergency.py           globale Escape-controle en afsluiten
-assets/                  PNG-frames en optionele eigen WAVs
-generated_audio/         meegeleverde gegenereerde WAV-voorbeelden
-.github/workflows/       handmatig starten van een Windows-build op GitHub
-tools/generate_assets.py sprites en camerabeelden uit atlas genereren
-tools/generate_sounds.py eigen jumpscaregeluiden genereren
-tools/package_project.py broncode-ZIP opnieuw maken
-downloads/               complete project-ZIP
-settings.json            voorbeeld van de standaardinstellingen
-requirements.txt         directe dependencies
-build_windows.bat        Windows-build inclusief tests
-tests/                   geautomatiseerde tests
-```
-
-## Validatie in deze cloudomgeving
-
-De app en dependencies zijn in de Linux-cloudomgeving ook met Python 3.13 geïnstalleerd en getest. De geautomatiseerde tests en een offscreen-start van de app zijn uitgevoerd; zie het opleverbericht voor de resultaten. Echte Windows-desktopintegratie, fysieke audio-uitvoer en het Windows-EXE zijn hier niet gevalideerd. De toepassing doet geen netwerkverzoeken, verzamelt geen persoonsgegevens en wijzigt geen andere gebruikersbestanden.
+Fysieke audio, Windows globale sneltoetsen, hoge DPI op meerdere monitors en interactie met andere Windows-apps vereisen een echte Windows-desktoptest. In de cloud is de GitHub Actions-API niet bereikbaar; controleer de nieuwste buildstatus en artifacts op GitHub. Een push of opgeslagen workflow is geen bewijs van een geslaagde Windows-build.

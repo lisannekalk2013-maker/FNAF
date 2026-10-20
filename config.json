@@ -1,0 +1,42 @@
+{
+  "characters": [
+    "Freddy",
+    "Bonnie",
+    "Chica",
+    "Foxy",
+    "Golden Freddy",
+    "Springtrap"
+  ],
+  "count": 6,
+  "speed": 1.0,
+  "event_chance": 0.3,
+  "jumpscares": true,
+  "volume": 0.15,
+  "ambient_volume": 0.08,
+  "silent": false,
+  "mode": "normal",
+  "startup": false,
+  "system_volume": false,
+  "image_popups": true,
+  "activity": {
+    "Freddy": 10,
+    "Bonnie": 10,
+    "Chica": 10,
+    "Foxy": 10,
+    "Golden Freddy": 10,
+    "Springtrap": 10
+  },
+  "image_chance": 0.35,
+  "drag_chance": 0.45,
+  "theft_chance": 0.35,
+  "chase_chance": 0.4,
+  "golden_minutes": 22.0,
+  "special_events": true,
+  "reduced_effects": true,
+  "fullscreen": true,
+  "max_images": 5,
+  "image_lifetime": 45.0,
+  "fps": 30,
+  "jumpscare_cooldown": 8.0,
+  "animationspeed": 1.0
+}

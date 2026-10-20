@@ -58,3 +58,17 @@ def test_escape_requires_continuous_five_seconds():
 def test_image_setting_defaults_and_validation():
     assert normalize({})['image_popups'] is True
     assert normalize({'image_popups': False})['image_popups'] is False
+
+
+def test_config_v2_migrates_legacy_and_clamps(tmp_path):
+    import json
+    path = tmp_path/'config.json'
+    (tmp_path/'settings.json').write_text(json.dumps({'silent':True, 'activity':{'Foxy':99,'Bonnie':-1}, 'fps':1000, 'max_images':999}))
+    result = load(path)
+    assert result['silent']
+    assert result['activity']['Foxy'] == 20 and result['activity']['Bonnie'] == 0
+    assert result['fps'] == 60 and result['max_images'] == 12
+    save(path, result)
+    assert path.is_file() and load(path) == result
+    assert normalize({'activity':{'Freddy':'bad'}})['activity']['Freddy'] == 10
+    assert normalize({'activity':None, 'fps':float('inf')})['fps'] == 30

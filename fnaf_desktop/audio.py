@@ -40,15 +40,19 @@ class Audio:
         if not self.effect.isPlaying():
             self.restore()
 
+    def resolve(self, name):
+        candidates = [self.assets/'audio'/(name+'.wav'), self.assets/(name+'.wav')]
+        return next((p for p in candidates if p.is_file()), None)
+
     def play(self, name, settings, scare=False):
         self.stop()
         if settings['silent']:
             return
         try:
-            custom = self.assets / (name + '.wav')
-            path = custom if custom.is_file() else self.folder / ('scare.wav' if scare else 'ambient.wav')
+            custom = self.resolve(name)
+            path = custom if custom else self.folder / ('scare.wav' if scare else 'ambient.wav')
             self.effect.setSource(QUrl.fromLocalFile(str(path.resolve())))
-            self.effect.setVolume(settings['volume'] if scare else min(.08, settings['volume']))
+            self.effect.setVolume(settings['volume'] if scare else min(settings.get('ambient_volume', .08), .5))
             if scare and settings['system_volume'] and sys.platform == 'win32':
                 if self.guard.endpoint is None:
                     from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume

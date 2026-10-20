@@ -42,4 +42,6 @@ if __name__ == '__main__':
     for index, (name, profile) in enumerate(PROFILES.items()):
         generate(ASSETS/(name+'_scare.wav'), profile, index)
     generate(ASSETS/'freddy.wav', PROFILES['freddy'], 10, laugh=True)
-    print('Generated six distinct jumpscare WAVs and a Freddy laugh.')
+    for index, name in enumerate(['foxy_sprint', 'camera_static', 'golden_glitch', 'theft', 'ambient', 'chica']):
+        generate(ASSETS/(name+'.wav'), (90+index*27, 2.1+index*.3, .25, 8+index*2), 30+index)
+    print('Generated character sounds and six separate event/ambient effects.')

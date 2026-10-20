@@ -8,13 +8,20 @@ import subprocess
 import sys
 import time
 
-from PySide6.QtCore import Qt, QTimer, QPoint, QAbstractNativeEventFilter, QLockFile
+from PySide6.QtCore import Qt, QTimer, QPoint, QAbstractNativeEventFilter, QLockFile, QUrl
 from PySide6.QtGui import QColor, QPainter, QPen, QCursor, QPixmap, QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QWidget, QDialog, QVBoxLayout, QLabel,
     QCheckBox, QSlider, QSpinBox, QComboBox, QPushButton, QSystemTrayIcon, QMenu, QMessageBox, QScrollArea)
-from .core import NAMES, load, save, settings_path
+from .core import NAMES, load, save, settings_path, normalize
 from .audio import Audio
 from .emergency import EscapeExit
+from .images import ImageManager
+from .behaviour import BehaviourDirector
+from .media import image_files, scare_source, safe_pixmap, IMAGE_EXTENSIONS
+from .events import EventManager
+from .settings_ui import Settings
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PySide6.QtMultimediaWidgets import QVideoWidget
 
 COLORS = ['#986331', '#7954ad', '#e4c144', '#b44c38', '#c7a63f', '#79834d']
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent))
@@ -94,6 +101,12 @@ class Pet(QWidget):
         self.deadline = time.monotonic() + random.uniform(3, 10)
         self.frames = [QPixmap(str(p)) for p in sorted((ASSETS / name.lower().replace(' ', '_')).glob('walk_*.png'))]
         self.frames = [p for p in self.frames if not p.isNull()]
+        slug = name.lower().replace(' ', '_')
+        custom = next((p for p in sorted((ASSETS/'images'/'characters').glob(slug+'.*')) if p.suffix.lower() in IMAGE_EXTENSIONS), None)
+        if custom:
+            image = safe_pixmap(custom, 512)
+            if not image.isNull():
+                self.frames = [image]
         r = screen.availableGeometry()
         self.posx = float(random.randint(r.left(), max(r.left(), r.right()-110)))
         self.posy = float(random.randint(r.top(), max(r.top(), r.bottom()-150)))
@@ -113,7 +126,9 @@ class Pet(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         if self.frames:
-            p.drawPixmap(self.rect(), self.frames[0 if self.state == 'watch' else (self.frame//4) % len(self.frames)])
+            if len(self.frames) == 1 and self.state != 'watch':
+                p.translate(0, -abs(math.sin(self.frame*.4))*3)
+            p.drawPixmap(self.rect(), self.frames[0 if self.state == 'watch' else int(self.frame//(2 if self.state == "run" else 4)) % len(self.frames)])
         else:
             draw_character(p, self.name, self.frame if self.state not in ('watch', 'hide') else 0)
 
@@ -126,9 +141,13 @@ class Pet(QWidget):
     def tick(self, dt, now):
         if self.c.scaring:
             return
-        self.frame += 1
+        if self.c.director.tick_pet(self, dt):
+            return
+        self.frame += self.c.settings['animationspeed']*dt*30
         r = self.screen.availableGeometry()
         cursor = QCursor.pos()
+        if self.name in ('Freddy', 'Chica') and (cursor-self.pos()-QPoint(55, 75)).manhattanLength() < 60:
+            self.state, self.until, self.watch_cursor = 'watch', now+.7, cursor
         if self.state == 'hide':
             if now >= self.until:
                 self.state = 'walk'
@@ -137,7 +156,7 @@ class Pet(QWidget):
             return
         if now >= self.deadline:
             self.deadline = now + random.uniform(3, 10)
-            chance = self.c.settings['event_chance'] * {'calm': .25, 'normal': 1, 'chaos': 2}[self.c.settings['mode']]
+            chance = self.c.settings['event_chance'] * self.c.settings['activity'][self.name]/10 * {'calm': .25, 'normal': 1, 'chaos': 2}[self.c.settings['mode']]
             if random.random() < chance:
                 self.random_event(now)
             else:
@@ -179,25 +198,77 @@ class Pet(QWidget):
             self.hide()
         elif self.name == 'Foxy':
             self.state, self.until = 'run', now+2
+            if random.random() < .3:
+                self.direction = 1 if QCursor.pos().x() > self.posx else -1
+            self.c.audio.play('foxy_sprint', self.c.settings)
         elif self.name == 'Bonnie':
             self.state, self.until, self.watch_cursor = 'watch', now+1, QCursor.pos()
         elif self.name == 'Chica':
+            self.c.audio.play('chica', self.c.settings)
             self.c.popup('🧁  Chica heeft een cupcake achtergelaten!', self.pos())
         elif self.name == 'Freddy':
             self.c.audio.play('freddy', self.c.settings)
         else:
+            self.c.audio.play('ambient', self.c.settings)
             self.c.popup('IT’S ME — de nachtdienst roept…', self.pos())
 
 
 class Scare(QWidget):
-    def __init__(self, c, name, screen):
-        super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+    def __init__(self, c, name, screen, primary=False):
+        super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool | Qt.WindowType.WindowDoesNotAcceptFocus | Qt.WindowType.WindowTransparentForInput)
         self.c, self.name, self.started = c, name, time.monotonic()
-        self.setGeometry(screen.geometry())
+        rect = screen.geometry()
+        if not c.settings['fullscreen']:
+            rect = screen.availableGeometry()
+            rect.setWidth(min(640, rect.width()))
+            rect.setHeight(min(480, rect.height()))
+            rect.moveCenter(screen.availableGeometry().center())
+        self.setGeometry(rect)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.image = QPixmap(str(ASSETS / name.lower().replace(' ', '_') / 'scare.png'))
+        video, _, fallback = c.scare_media
+        self.image = safe_pixmap(fallback, 1000)
+        self.player = None
+        self.failed = False
+        self.primary = primary
+        self.video_widget = None
+        if video:
+            self.video_widget = QVideoWidget(self)
+            self.video_widget.setGeometry(self.rect())
+            self.video_widget.hide()
+            self.player = QMediaPlayer(self)
+            self.player.setVideoOutput(self.video_widget)
+            if primary and not c.scare_wav:
+                output = QAudioOutput(self)
+                output.setVolume(min(.5, c.settings['volume']))
+                output.setMuted(c.settings['silent'])
+                self.player.setAudioOutput(output)
+            self.player.setSource(QUrl.fromLocalFile(str(video.resolve())))
+            self.player.errorOccurred.connect(self.video_failed)
+            if primary:
+                self.player.mediaStatusChanged.connect(lambda status: c.end_scare() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
+                self.player.durationChanged.connect(lambda duration: c.scare_timer.start(min(10200, max(1200, duration+200))) if duration and c.scaring else None)
         self.show()
+
+    def start_video(self):
+        if self.player and not self.failed:
+            self.video_widget.show()
+            self.player.play()
+
+    def video_failed(self, *_):
+        self.failed = True
+        if self.player:
+            self.player.stop()
+            self.video_widget.hide()
+        if self.primary and self.c.scaring:
+            self.c.scare_timer.start(1700)
+            self.c.audio.play(self.name.lower().replace(' ', '_')+'_scare', self.c.settings, True)
+        self.update()
+
+    def closeEvent(self, event):
+        if self.player:
+            self.player.stop()
+        super().closeEvent(event)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -205,8 +276,15 @@ class Scare(QWidget):
         elapsed = time.monotonic()-self.started
         if elapsed < .2:
             return
-        # Zoom and sway; no strobe or flashing background.
-        size = min(self.height()*.85, 600) * (1 + .09*math.sin(elapsed*15))
+        if self.c.active_frames:
+            index = min(len(self.c.active_frames)-1, int((elapsed-.2)*30))
+            image = self.c.active_frames[index]
+            scaled = image.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((self.width()-scaled.width())//2, (self.height()-scaled.height())//2, scaled)
+            return
+        # Different character rhythms, smooth zoom; no strobe.
+        frequency = {'Freddy': 9, 'Bonnie': 13, 'Chica': 11, 'Foxy': 17, 'Golden Freddy': 5, 'Springtrap': 7}[self.name]
+        size = min(self.height()*.85, 600) * (1+.07*math.sin(elapsed*frequency))
         p.translate(self.width()/2-size*.37, self.height()/2-size*.5)
         p.scale(size/150, size/150)
         if not self.image.isNull():
@@ -254,114 +332,31 @@ def startup(enabled):
                 pass
 
 
-class Settings(QDialog):
-    def __init__(self, c):
-        super().__init__()
-        self.c = c
-        self.setWindowTitle('FNAF Desktop — instellingen')
-        self.setMinimumWidth(400)
-        outer = QVBoxLayout(self)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        panel = QWidget()
-        panel.setObjectName('SettingsPanel')
-        layout = QVBoxLayout(panel)
-        scroll.setWidget(panel)
-        outer.addWidget(scroll)
-        self.resize(460, min(740, c.app.primaryScreen().availableGeometry().height()-60))
-        layout.addWidget(QLabel('Alleen gebruiken met toestemming van de eigenaar.\nStop: houd Esc 5 seconden ingedrukt, of Ctrl+Shift+Q.'))
-        self.characters = {}
-        for name in NAMES:
-            box = QCheckBox(name)
-            box.setChecked(name in c.settings['characters'])
-            layout.addWidget(box)
-            self.characters[name] = box
-        self.count = QSpinBox()
-        self.count.setRange(1, 12)
-        self.count.setValue(c.settings['count'])
-        layout.addWidget(QLabel('Aantal animatronics'))
-        layout.addWidget(self.count)
-        self.sliders = {}
-        for key, label, lo, hi in [('speed', 'Bewegingssnelheid', 20, 300), ('event_chance', 'Kans op gebeurtenissen (%)', 0, 100), ('volume', 'Maximaal audiovolume (0–50%, standaard 15%)', 0, 50)]:
-            layout.addWidget(QLabel(label))
-            slider = QSlider(Qt.Orientation.Horizontal)
-            slider.setRange(lo, hi)
-            slider.setValue(round(c.settings[key]*100))
-            layout.addWidget(slider)
-            value_label = QLabel(str(slider.value()) + '%')
-            slider.valueChanged.connect(lambda value, label=value_label: label.setText(str(value) + '%'))
-            layout.addWidget(value_label)
-            self.sliders[key] = slider
-        self.checks = {}
-        for key, label in [('image_popups', 'Willekeurige FNAF-afbeeldingen'), ('jumpscares', 'Jumpscares bij klikken'), ('silent', 'Volledig stil'), ('system_volume', 'Systeemvolume tijdelijk begrenzen (Windows)'), ('startup', 'Opstarten met Windows (alleen na bevestiging)')]:
-            box = QCheckBox(label)
-            box.setChecked(c.settings[key])
-            if sys.platform != 'win32' and key in ('startup', 'system_volume'):
-                box.setEnabled(False)
-            self.checks[key] = box
-            layout.addWidget(box)
-        self.audio_status = QLabel()
-        self.audio_status.setWordWrap(True)
-        layout.addWidget(self.audio_status)
-        self.status_timer = QTimer(self)
-        self.status_timer.timeout.connect(lambda: self.audio_status.setText(c.audio.error))
-        self.status_timer.start(1000)
-        self.mode = QComboBox()
-        self.mode.addItems(['normal', 'calm', 'chaos'])
-        self.mode.setCurrentText(c.settings['mode'])
-        layout.addWidget(QLabel('Modus: normal / calm (rustig) / chaos'))
-        layout.addWidget(self.mode)
-        self.sound_choice = QComboBox()
-        self.sound_choice.addItems(NAMES)
-        layout.addWidget(QLabel('Personage voor geluidstest'))
-        layout.addWidget(self.sound_choice)
-        for label, callback in [('Volume testen', self.test), ('Instellingen toepassen', self.apply)]:
-            b = QPushButton(label)
-            b.clicked.connect(callback)
-            layout.addWidget(b)
-        quit_button = QPushButton('Afsluiten (Ctrl+Shift+Q)')
-        quit_button.clicked.connect(c.app.quit)
-        outer.addWidget(quit_button)
-
-    def values(self):
-        return dict(characters=[n for n, b in self.characters.items() if b.isChecked()], count=self.count.value(),
-                    mode=self.mode.currentText(), **{k: s.value()/100 for k, s in self.sliders.items()},
-                    **{k: b.isChecked() for k, b in self.checks.items()})
-
-    def test(self):
-        self.c.audio.play(self.sound_choice.currentText().lower().replace(' ', '_') + '_scare', self.values(), True)
-        QTimer.singleShot(1500, self.c.audio.stop)
-
-    def apply(self):
-        values = self.values()
-        try:
-            if values['startup'] != self.c.settings['startup']:
-                if values['startup'] and QMessageBox.question(self, 'Windows opstarten', 'Mag FNAF Desktop zichtbaar starten wanneer je inlogt?') != QMessageBox.StandardButton.Yes:
-                    self.checks['startup'].setChecked(False)
-                    values['startup'] = False
-                startup(values['startup'])
-            save(settings_path(), values)
-            self.c.settings = values
-            self.c.audio.stop()
-            self.c.rebuild()
-        except Exception as exc:
-            QMessageBox.warning(self, 'Instellingen niet opgeslagen', str(exc))
 
 
 class Controller:
     def __init__(self, app):
         self.app = app
+        self.assets = ASSETS
         self.settings = load(settings_path())
         self.pets, self.scare_windows, self.popups = [], [], []
         self.scaring = False
+        self.active_frames = []
+        self.cooldown_until = 0.0
         self.closing = False
+        self.next_scan = time.monotonic()+10
         self.next_image = time.monotonic() + random.uniform(12, 25)
-        self.image_paths = sorted((ASSETS / "popups").glob("*.png"))
+        self.image_paths = image_files(ASSETS)
+        self.images = ImageManager(self)
+        self.director = BehaviourDirector(self)
+        self.events = EventManager(self)
         self.audio = Audio(app, settings_path().parent / 'audio', ASSETS)
         self.menu = QMenu()
         self.menu.addAction('Instellingen', self.open_settings)
         self.menu.addAction('FNAF-afbeelding tonen', self.image_popup)
         self.menu.addAction('Alles pauzeren / hervatten', self.pause)
+        self.menu.addAction('Afbeeldingen opruimen', self.clear_images)
+        self.menu.addAction('Personages verbergen / tonen', self.toggle_pets)
         self.menu.addAction('Afsluiten (Ctrl+Shift+Q)', app.quit)
         icon = QPixmap(110, 150)
         icon.fill(Qt.GlobalColor.transparent)
@@ -372,16 +367,17 @@ class Controller:
         self.tray.setContextMenu(self.menu)
         self.tray.setToolTip('FNAF Desktop — Ctrl+Shift+Q om af te sluiten')
         self.tray.show()
-        self.dialog = Settings(self)
+        self.dialog = Settings(self, startup)
         self.dialog.finished.connect(lambda _: QTimer.singleShot(0, self.show_without_tray) if not self.closing and not QSystemTrayIcon.isSystemTrayAvailable() else None)
-        self.emergency = EscapeExit(app, self.quit)
+        self.emergency = EscapeExit(app, self.quit, interrupt_callback=self.interrupt_effects)
         self.hotkey = Hotkey(self)
         app.installNativeEventFilter(self.hotkey)
         self.paused = False
+        self.pets_hidden = False
         self.last = time.monotonic()
         self.timer = QTimer(app)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(33)
+        self.timer.start(round(1000/self.settings['fps']))
         self.scare_timer = QTimer(app)
         self.scare_timer.setSingleShot(True)
         self.scare_timer.timeout.connect(self.end_scare)
@@ -399,6 +395,10 @@ class Controller:
         if not self.closing:
             self.dialog.show()
 
+    def interrupt_effects(self):
+        self.events.clear()
+        self.end_scare()
+
     def quit(self):
         self.cleanup()
         self.app.quit()
@@ -410,61 +410,111 @@ class Controller:
 
     def rebuild(self):
         self.end_scare()
+        self.events.clear()
+        self.director.clear()
+        self.images.clear()
         for pet in self.pets:
             pet.close()
             pet.deleteLater()
         self.pets = []
-        names = self.settings['characters']
+        names = [n for n in self.settings['characters'] if self.settings['activity'][n] > 0]
         screens = self.app.screens()
         if names and screens:
             for i in range(self.settings['count']):
-                self.pets.append(Pet(self, names[i % len(names)], screens[i % len(screens)]))
+                pet = Pet(self, names[i % len(names)], screens[i % len(screens)])
+                self.pets.append(pet)
+                if pet.name == 'Golden Freddy':
+                    self.director.tick_pet(pet, 0)
+                if getattr(self, 'pets_hidden', False) or getattr(self, 'paused', False):
+                    pet.hide()
+
+    def clear_images(self):
+        self.director.clear()
+        self.images.clear()
+
+    def toggle_pets(self):
+        self.pets_hidden = not self.pets_hidden
+        if self.pets_hidden:
+            self.events.clear()
+            self.director.clear()
+        for pet in self.pets:
+            pet.setVisible(not self.pets_hidden and not self.paused and pet.state != 'hide')
 
     def pause(self):
         self.paused = not self.paused
         if self.paused:
             self.end_scare()
+        self.events.clear()
+        self.images.visibility(not self.paused)
         for pet in self.pets:
-            pet.setVisible(not self.paused and pet.state != 'hide')
+            pet.setVisible(not self.paused and not self.pets_hidden and pet.state != 'hide')
 
     def tick(self):
         now = time.monotonic()
         dt, self.last = min(.1, now-self.last), now
-        if not self.paused and not self.scaring and now >= self.next_image:
+        if now >= self.next_scan:
+            self.next_scan = now+10
+            self.image_paths = image_files(ASSETS)
+        if not self.paused and not self.scaring and not self.events.frozen and now >= self.next_image:
             self.next_image = now + random.uniform(12, 25) * (2 if self.settings['mode'] == 'calm' else .5 if self.settings['mode'] == 'chaos' else 1)
-            if self.settings['image_popups'] and random.random() < self.settings['event_chance']:
+            if self.settings['image_popups'] and random.random() < self.settings['image_chance']:
                 self.image_popup()
-        if not self.paused:
-            for pet in self.pets:
-                pet.tick(dt, now)
+        if not self.paused and not self.scaring:
+            self.events.tick(dt)
+        if not self.paused and not self.scaring and not self.events.frozen:
+            if not self.pets_hidden:
+                self.director.tick(dt)
+                for pet in self.pets:
+                    pet.tick(dt, now)
+            self.images.tick(dt)
         for window in self.scare_windows:
             window.update()
 
     def scare(self, pet):
-        if self.scaring or self.paused or not self.settings['jumpscares'] or self.settings['mode'] == 'calm':
+        if self.scaring or self.paused or self.emergency.was_pressed or time.monotonic() < self.cooldown_until or not self.settings['jumpscares'] or self.settings['mode'] == 'calm':
             return
         if sys.platform == 'win32' and not self.hotkey.registered:
             return
+        self.events.clear()
+        self.audio.stop()
         self.scaring = True
-        self.scare_windows = [Scare(self, pet.name, screen) for screen in self.app.screens()]
+        self.scare_media = scare_source(ASSETS, pet.name)
+        video, frame_paths, _ = self.scare_media
+        self.active_frames = [safe_pixmap(path, 512) for path in frame_paths[:120]]
+        self.active_frames = [frame for frame in self.active_frames if not frame.isNull()]
+        slug = pet.name.lower().replace(' ', '_')
+        self.scare_wav = self.audio.resolve(slug+'_scare')
+        if video and not (ASSETS/'audio'/(slug+'_scare.wav')).is_file():
+            self.scare_wav = None
+        self.scare_windows = [Scare(self, pet.name, screen, i == 0) for i, screen in enumerate(self.app.screens())]
         active_windows = self.scare_windows
-        QTimer.singleShot(200, lambda: self.audio.play(pet.name.lower().replace(' ', '_')+'_scare', self.settings, True) if self.scaring and self.scare_windows is active_windows else None)
-        self.scare_timer.start(1700)
+        def start():
+            if not self.scaring or self.scare_windows is not active_windows:
+                return
+            if not video or self.scare_wav:
+                self.audio.play(slug+'_scare', self.settings, True)
+            for window in active_windows:
+                window.start_video()
+        QTimer.singleShot(200, start)
+        self.scare_timer.start(10200 if video else round(len(self.active_frames)/30*1000+200) if self.active_frames else 1700)
 
     def end_scare(self):
         if hasattr(self, 'scare_timer'):
             self.scare_timer.stop()
+        if self.scaring:
+            self.cooldown_until = time.monotonic()+self.settings['jumpscare_cooldown']
         self.scaring = False
         self.audio.stop()
         for window in self.scare_windows:
             window.close()
             window.deleteLater()
         self.scare_windows = []
+        self.active_frames = []
 
     def popup(self, text, pos):
         if len(self.popups) >= 3:
             return
-        label = QLabel(text, None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        label = QLabel(text, None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         label.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         label.setStyleSheet('background:#261d2e;color:#eed6a3;padding:15px;border:1px solid #a4804c')
         label.adjustSize()
@@ -481,38 +531,8 @@ class Controller:
         QTimer.singleShot(3000, remove)
 
     def image_popup(self):
-        if self.closing or self.paused or self.scaring or len(self.popups) >= 3 or not self.image_paths:
-            return
-        path = random.choice(self.image_paths)
-        image = QPixmap(str(path))
-        if image.isNull():
-            return
-        window = QDialog(None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
-        window.setWindowTitle('FNAF — ' + path.stem.replace('_', ' '))
-        window.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        window.setStyleSheet('background:#14151a;color:#eadbb7')
-        layout = QVBoxLayout(window)
-        screen = random.choice(self.app.screens())
-        area = screen.availableGeometry()
-        label = QLabel()
-        label.setPixmap(image.scaled(max(1, min(360, area.width()-90)), max(1, min(270, area.height()-140)), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        layout.addWidget(label)
-        close = QPushButton('Sluiten ×')
-        close.clicked.connect(window.close)
-        layout.addWidget(close)
-        window.adjustSize()
-        window.move(random.randint(area.left(), max(area.left(), area.right()-window.width())), random.randint(area.top(), max(area.top(), area.bottom()-window.height())))
-        self.popups.append(window)
-        def forget(_=0):
-            if window in self.popups:
-                self.popups.remove(window)
-            window.deleteLater()
-        window.finished.connect(forget)
-        expiry = QTimer(window)
-        expiry.setSingleShot(True)
-        expiry.timeout.connect(window.close)
-        expiry.start(12000)
-        window.show()
+        if not self.closing and not self.paused and not self.scaring:
+            return self.images.create(screen=random.choice(self.app.screens()))
 
     def cleanup(self):
         if self.closing:
@@ -521,6 +541,9 @@ class Controller:
         self.emergency.close()
         self.dialog.status_timer.stop()
         self.timer.stop()
+        self.events.clear()
+        self.director.clear()
+        self.images.clear()
         self.end_scare()
         self.hotkey.close()
         self.app.removeNativeEventFilter(self.hotkey)
@@ -533,7 +556,7 @@ def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     app.setApplicationName('FNAF Desktop')
-    app.setStyleSheet('QDialog,QMenu,QScrollArea,QWidget#SettingsPanel {background:#1c1923;color:#eee} QLabel,QCheckBox {color:#eee} QPushButton {padding:7px;background:#4a354b;color:white} QComboBox,QSpinBox {background:#332b3b;color:white}')
+    app.setStyleSheet('QDialog,QMenu,QScrollArea,QWidget#SettingsPanel {background:#1c1923;color:#eee} QLabel,QCheckBox {color:#eee} QPushButton {padding:7px;background:#4a354b;color:white} QComboBox,QSpinBox,QDoubleSpinBox {background:#332b3b;color:white} QTabBar::tab {background:#302735;color:#eee;padding:7px} QTabBar::tab:selected {background:#604569} QTabWidget::pane {border:1px solid #51465a}')
     try:
         settings_path().parent.mkdir(parents=True, exist_ok=True)
         lock = QLockFile(str(settings_path().parent / 'app.lock'))

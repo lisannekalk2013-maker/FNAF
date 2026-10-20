@@ -2,26 +2,50 @@ name: Build Windows EXE
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           architecture: x64
-      - name: Install, test and build
+      - name: Install, test and build Windows ZIP
         shell: cmd
         run: build_windows.bat --ci
-      - name: Upload complete application folder
+      - name: Smoke test standalone EXE (silent)
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "fnaf-exe-smoke"
+          $appProcess = Start-Process -FilePath ".\dist\FNAFDesktop\FNAFDesktop.exe" -ArgumentList "--smoke" -PassThru
+          if (-not $appProcess.WaitForExit(30000)) {
+            $appProcess.Kill()
+            throw "Standalone EXE did not exit within 30 seconds"
+          }
+          if ($appProcess.ExitCode -ne 0) { throw "Standalone EXE smoke test failed: $($appProcess.ExitCode)" }
+      - name: Upload complete application folder (download is a ZIP)
         uses: actions/upload-artifact@v4
         with:
           name: FNAFDesktop-Windows
           path: dist/FNAFDesktop/
+          if-no-files-found: error
+      - name: Upload locally reproducible Windows ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: FNAFDesktop-Chaos-2.0-Windows-ZIP
+          path: dist/FNAFDesktop-Chaos-2.0-Windows.zip
           if-no-files-found: error

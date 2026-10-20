@@ -7,10 +7,12 @@ from .core import HoldToQuit
 
 
 class EscapeExit(QObject):
-    def __init__(self, app, quit_callback, key_reader=None):
+    def __init__(self, app, quit_callback, key_reader=None, interrupt_callback=None):
         super().__init__(app)
         self.app = app
         self.quit_callback = quit_callback
+        self.interrupt_callback = interrupt_callback
+        self.was_pressed = False
         self.hold = HoldToQuit(5.0)
         self.local_pressed = False
         self.key_reader = key_reader
@@ -36,6 +38,9 @@ class EscapeExit(QObject):
 
     def poll(self, now=None):
         pressed = self.key_reader() if self.key_reader else self.local_pressed
+        if pressed and not self.was_pressed and self.interrupt_callback:
+            self.interrupt_callback()
+        self.was_pressed = pressed
         if self.hold.update(pressed, time.monotonic() if now is None else now):
             self.timer.stop()
             self.quit_callback()

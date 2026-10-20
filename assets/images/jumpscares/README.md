@@ -1,0 +1,1 @@
+Maak per personage een submap: freddy, bonnie, chica, foxy, golden_freddy, springtrap. Voeg jumpscare.mp4 of jumpscare.webm toe, of frame_000.png, frame_001.png, enzovoort (30 fps, maximaal 120 frames). Originele clips zijn niet meegeleverd. De placeholder werkt als media ontbreekt.
