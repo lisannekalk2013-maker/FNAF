@@ -2,6 +2,10 @@
 
 Een zichtbare Python-desktopapp voor Windows 10/11 met zes geanimeerde desktopmaatjes. Alleen gebruiken op een computer waarvan de eigenaar toestemming heeft gegeven. Dit is een onofficieel fanproject; de meegeleverde tekeningen en synthetische geluiden zijn zelfgemaakt, geen bestanden uit de games.
 
+## Project downloaden
+
+Download de bijgewerkte broncode via [downloads/FNAF-project.zip](downloads/FNAF-project.zip) op GitHub (klik op **Download raw file** bij het bestand). Of kies op de hoofdpagina **Code → Download ZIP**. Bouw daarna een nieuwe EXE: een eerder gedownload EXE-artifact bevat deze wijzigingen nog niet.
+
 ## Starten op Windows
 
 Installeer Python 3.13 (64-bit), open een terminal in deze map en voer uit:
@@ -14,7 +18,7 @@ py -3.13 -m venv .venv
 
 Bij het starten opent altijd het instellingenvenster. Selecteer personages, stel hun aantal en snelheid in en klik **Instellingen toepassen**. Sluit het venster om de maatjes op het bureaublad te laten lopen. Met rechtsklikken op een personage of het systeemvakpictogram open je het menu. Zonder systeemvak blijft het instellingenvenster beschikbaar.
 
-**Stoppen:** Ctrl+Shift+Q (globaal op Windows), het systeemvakmenu of de knop Afsluiten. Kan Windows de sneltoets niet registreren, dan blijven jumpscares uit. Er is geen installatie op de achtergrond en geen toetsenbord- of muisvergrendeling.
+**Stoppen:** houd **Escape onafgebroken 5 seconden** ingedrukt (op Windows ook wanneer een andere app actief is), of gebruik Ctrl+Shift+Q (globaal op Windows), het systeemvakmenu of de knop Afsluiten. Kan Windows de sneltoets niet registreren, dan blijven jumpscares uit. De Escape-teller blijft actief tijdens pauze en jumpscares. Loslaten vóór vijf seconden zet de teller terug. Bij afsluiten stoppen timers, audio, personages en afbeeldingsvensters; het proces eindigt. Buiten Windows werkt Escape alleen zolang de app toetsenbordfocus heeft. Er is geen installatie op de achtergrond en geen toetsenbord- of muisvergrendeling.
 
 ## Gedrag
 
@@ -31,9 +35,15 @@ Links klikken start één jumpscare: alle personages stoppen, alle monitoren wor
 
 Rustige modus vertraagt de beweging, verlaagt de gebeurteniskans en schakelt jumpscares uit. Chaosmodus verhoogt de gebeurteniskans. Pauzeren via het menu stopt geluid en jumpscares en verbergt de personages.
 
+## Willekeurige afbeeldingsvensters
+
+Net zoals bij Desktop Goose verschijnen af en toe afzonderlijke afbeeldingsvensters: zes FNAF-camerabeelden staan in `assets/popups/`. Ze openen zonder de toetsenbordfocus over te nemen, zijn te sluiten met de knop of het kruisje en verdwijnen na 12 seconden. Er staan maximaal drie pop-upvensters tegelijk open. Tijdens jumpscares of pauze worden geen nieuwe afbeeldingen geopend. Via het systeemvakmenu **FNAF-afbeelding tonen** kun je ze direct bekijken.
+
+Zet **Willekeurige FNAF-afbeeldingen** uit om automatische afbeeldingen uit te schakelen. De gebeurteniskans en rustige/chaosmodus beïnvloeden de frequentie. Voeg zelf PNG-bestanden aan `assets/popups/` toe en herstart de app om ze te gebruiken. De app opent geen externe afbeeldingsprogramma’s en schrijft deze beelden niet op je bureaublad.
+
 ## Geluid en systeemvolume
 
-De standaard geluidssterkte van de app is 15%, instelbaar tussen 0 en 50%. Dit is geen garantie over fysieke geluidsdruk: gebruik eerst **Volume testen** op een laag niveau. Volledig stil schakelt alle appgeluiden uit. Er is één audiokanaal, dus geluiden overlappen niet.
+De standaard geluidssterkte van de app is 15%, instelbaar tussen 0 en 50%. Dit is geen garantie over fysieke geluidsdruk: gebruik eerst **Volume testen** op een laag niveau. Volledig stil schakelt alle appgeluiden uit. Er is één audiokanaal, dus geluiden overlappen niet. Elk van de zes personages heeft een eigen meegeleverd jumpscare-WAV-bestand; kies een personage boven **Volume testen** om dit apart te horen. Dit zijn originele, synthetische varianten passend bij de personages, geen opnamen uit de games. Freddy heeft ook een eigen synthetisch lachgeluid.
 
 De optionele Windows-volumebegrenzing staat standaard uit. Indien ingeschakeld leest de app het oorspronkelijke volume van het standaard audioapparaat, verlaagt het uitsluitend indien nodig en herstelt het na afspelen, bij pauzeren, fouten en normaal afsluiten. De mute-instelling wordt niet gewijzigd. Als de Windows-audio-API niet beschikbaar is, wordt de betreffende afspeelpoging afgebroken. Een geforceerde procesbeëindiging of stroomuitval kan herstel verhinderen; laat de optie uit als je uitsluitend het appvolume wilt aanpassen. Verander tijdens een jumpscare bij voorkeur niet het standaard audioapparaat.
 
@@ -45,7 +55,7 @@ Opstarten met Windows staat standaard uit. Aanzetten vraagt een afzonderlijke be
 
 ## Eigen assets toevoegen
 
-Zie [assets/README.md](assets/README.md). De meegeleverde 54 transparante PNGs zijn originele placeholders. Animatie en gedrag werken ook zonder assets dankzij de vectorfallback. Voor productie kun je gedetailleerdere sprites toevoegen waarvoor je gebruiksrechten hebt.
+Zie [assets/README.md](assets/README.md). De meegeleverde 54 PNGs gebruiken gedetailleerde, gegenereerde 3D-fanillustraties met transparante achtergrond en een wiegende loopanimatie. De bronafbeelding staat in `assets/character_atlas.png`. Animatie en gedrag werken ook zonder assets dankzij de vectorfallback. Voor productie kun je gedetailleerdere sprites toevoegen waarvoor je gebruiksrechten hebt.
 
 ## Tests
 
@@ -53,7 +63,7 @@ Zie [assets/README.md](assets/README.md). De meegeleverde 54 transparante PNGs z
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-De tests gebruiken de offscreen Qt-backend: instellingen, volumebegrenzing en herstel met een nep-audioapparaat, alle zes personages, echte Qt-muisklikken, niet-overlappende jumpscares, automatische afloop, pauzeren en stille modus. Ze spelen geen geluid af en wijzigen geen Windows-opstartinstellingen.
+De 20 tests gebruiken de offscreen Qt-backend: instellingen, volumebegrenzing en herstel met een nep-audioapparaat, alle zes personages, echte Qt-muisklikken, niet-overlappende jumpscares, automatische afloop, pauzeren en stille modus. Extra tests controleren de unieke WAVs, afbeeldingsvensters, continu vijf seconden Escape vasthouden en het afsluiten van een echt subprocess. Ze spelen geen geluid af en wijzigen geen Windows-opstartinstellingen.
 
 Een korte GUI-smoketest is ook beschikbaar:
 
@@ -90,11 +100,15 @@ run.py                   startpunt
 fnaf_desktop/
   app.py                 vensters, animatie, instellingen, systeemvak, sneltoets
   audio.py               één audiokanaal, synthetisch geluid, Windows-audio
-  core.py                instellingen en herstelbare volumebegrenzing
+  core.py                instellingen, Escape-teller en volumebegrenzing
+  emergency.py           globale Escape-controle en afsluiten
 assets/                  PNG-frames en optionele eigen WAVs
 generated_audio/         meegeleverde gegenereerde WAV-voorbeelden
 .github/workflows/       handmatig starten van een Windows-build op GitHub
-tools/generate_assets.py originele placeholderafbeeldingen genereren
+tools/generate_assets.py sprites en camerabeelden uit atlas genereren
+tools/generate_sounds.py eigen jumpscaregeluiden genereren
+tools/package_project.py broncode-ZIP opnieuw maken
+downloads/               complete project-ZIP
 settings.json            voorbeeld van de standaardinstellingen
 requirements.txt         directe dependencies
 build_windows.bat        Windows-build inclusief tests

@@ -120,3 +120,96 @@ def test_audio_playback_volume_and_failure_restore(controller, monkeypatch, fail
         c.audio.stop()
         assert not sound.active
         assert endpoint.value == .7
+
+
+def test_random_image_popups_close_and_limit(controller, monkeypatch):
+    c = controller
+    assert len(c.image_paths) >= 6
+    c.settings['event_chance'] = 1
+    monkeypatch.setattr('fnaf_desktop.app.random.random', lambda: 0)
+    c.next_image = 0
+    c.tick()
+    assert len(c.popups) == 1
+    assert c.popups[0].isVisible()
+    c.image_popup()
+    c.image_popup()
+    c.image_popup()
+    assert len(c.popups) == 3
+    c.popups[0].close()
+    assert len(c.popups) == 2
+    c.settings['image_popups'] = False
+    c.next_image = 0
+    c.tick()
+    assert len(c.popups) == 2
+
+
+def test_escape_quits_everything_even_during_scare(controller, monkeypatch):
+    c = controller
+    called = []
+    monkeypatch.setattr(c.app, 'quit', lambda: called.append(True))
+    c.image_popup()
+    windows = [*c.pets, *c.popups, c.dialog]
+    c.scare(c.pets[0])
+    assert c.scaring
+    pressed = [True]
+    c.emergency.key_reader = lambda: pressed[0]
+    c.emergency.poll(10)
+    c.emergency.poll(14.9)
+    assert not called
+    pressed[0] = False
+    c.emergency.poll(15)
+    pressed[0] = True
+    c.emergency.poll(20)
+    c.emergency.poll(25)
+    assert called == [True]
+    assert c.closing
+    assert not c.scaring and not c.scare_windows
+    assert not c.timer.isActive() and not c.emergency.timer.isActive()
+    assert not c.scare_timer.isActive()
+    assert not c.audio.effect.isPlaying()
+    assert all(not w.isVisible() for w in windows)
+    QTest.qWait(50)
+    assert not c.dialog.isVisible()
+
+
+def test_character_sounds_are_present_and_distinct():
+    import hashlib
+    import wave
+    from fnaf_desktop.app import ASSETS
+    hashes = set()
+    for name in NAMES:
+        path = ASSETS / (name.lower().replace(' ', '_') + '_scare.wav')
+        with wave.open(str(path), 'rb') as sound:
+            assert sound.getnchannels() == 1
+            assert sound.getsampwidth() == 2
+            assert 1 <= sound.getnframes()/sound.getframerate() <= 1.5
+        hashes.add(hashlib.sha256(path.read_bytes()).digest())
+    assert len(hashes) == 6
+
+
+def test_escape_shutdown_exits_real_process(tmp_path):
+    import subprocess
+    import sys
+    script = '''
+import time
+from PySide6.QtWidgets import QApplication
+from fnaf_desktop.app import Controller
+app = QApplication([])
+app.setQuitOnLastWindowClosed(False)
+c = Controller(app)
+c.settings['silent'] = True
+c.image_popup()
+c.scare(c.pets[0])
+c.emergency.key_reader = lambda: True
+c.emergency.hold.started = time.monotonic()-5.1
+result = app.exec()
+assert result == 0 and c.closing
+assert not c.timer.isActive() and not c.emergency.timer.isActive()
+assert not c.scare_windows and not c.audio.effect.isPlaying()
+assert not any(w.isVisible() for w in app.topLevelWidgets())
+print('PROCESS_CLOSED')
+'''
+    environment = dict(os.environ, LOCALAPPDATA=str(tmp_path), QT_QPA_PLATFORM='offscreen')
+    result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True, env=environment, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert 'PROCESS_CLOSED' in result.stdout

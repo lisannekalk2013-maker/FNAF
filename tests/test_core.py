@@ -42,3 +42,19 @@ def test_failed_restore_can_be_retried():
     endpoint.SetMasterVolumeLevelScalar = setter
     guard.restore()
     assert endpoint.value == .8
+
+
+def test_escape_requires_continuous_five_seconds():
+    from fnaf_desktop.core import HoldToQuit
+    hold = HoldToQuit()
+    assert not hold.update(True, 10)
+    assert not hold.update(True, 14.999)
+    assert not hold.update(False, 14.999)
+    assert not hold.update(True, 20)
+    assert not hold.update(True, 24.999)
+    assert hold.update(True, 25)
+
+
+def test_image_setting_defaults_and_validation():
+    assert normalize({})['image_popups'] is True
+    assert normalize({'image_popups': False})['image_popups'] is False

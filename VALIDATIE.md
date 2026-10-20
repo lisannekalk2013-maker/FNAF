@@ -1,10 +1,8 @@
-# Controle voor GitHub-publicatie
+# Controle van de bijgewerkte versie
 
-- Python 3.13.5: installatie van requirements geslaagd, 14 tests geslaagd.
-- Een complete stille Qt-smoketest met Freddy en jumpscare is op Linux/offscreen geslaagd, inclusief automatisch afsluiten.
-- Dependency-resolutie voor Windows x64 en Python 3.13 is geslaagd, inclusief pycaw en comtypes. Dit is geen uitgevoerde Windows-build.
-- Alle Python-bestanden zijn gecontroleerd op syntaxis. Alle 54 PNGs zijn leesbaar met transparantie; beide meegeleverde WAVs zijn geldige PCM-bestanden.
-- `fnaf_desktop/*.py`, `run.py`, `settings.json` en de 54 sprites zijn byte voor byte gelijk aan de vorige ZIP. Alleen bouwinstructies, documentatie, aanvullende geluidsexemplaren, de GitHub-buildworkflow en een deterministische testaanpassing zijn toegevoegd/aangepast.
-- De applicatiecode is nagelopen op bestands-, register-, proces- en netwerkaanroepen. De app schrijft eigen instellingen/geluiden/lockbestand, vraagt expliciete toestemming voor de eigen Windows-opstartwaarde en begrenst het systeemvolume alleen als die optie is ingeschakeld. Beide opties staan standaard uit. Geen code voor verspreiding, dataverzameling, beveiligingsuitschakeling of het verwijderen van andere gebruikersbestanden aangetroffen.
-- Het bouwscript installeert dependencies in een lokale virtuele omgeving en schrijft bouwresultaten onder build/dist. Het vraagt geen administratorrechten en wijzigt geen Windows-opstartinstellingen. De GitHub-workflow draait alleen op handmatig verzoek, heeft read-only repositoryrechten en uploadt de volledige EXE-map als artifact.
-- Windows-EXE, Windows-audio, de globale sneltoets, systeemvak en fysieke monitors zijn niet vanuit deze Linux-machine gevalideerd. De eerste Windows-build moet via Actions of build_windows.bat worden uitgevoerd; controleer daarna die desktopfuncties op Windows. Dit is een codecontrole met tests, geen garantie dat elke mogelijke fout is uitgesloten.
+- Python 3.13.5 / Linux: 20 tests geslaagd, waaronder een volledige jumpscarecyclus, volumebegrenzing en herstel met een testapparaat, alle personages, pop-upvensters en zes unieke PCM-WAVs.
+- Escape moet vijf seconden continu worden vastgehouden; loslaten zet de teller terug. Tests controleren dit met een testklok en verifiëren dat timers, audio, overlays en pop-ups sluiten. Een afzonderlijk Python-proces is gestart en is na de Escape-afsluitroute daadwerkelijk geëindigd.
+- De bestaande stiltemodus, volumelimiet, optionele systeemvolumebegrenzing en expliciete bevestiging voor Windows-opstarten blijven behouden. Escape wordt alleen gecontroleerd, niet geblokkeerd; er worden geen toetsen of persoonlijke gegevens opgeslagen.
+- Afbeeldingen worden in eigen sluitbare appvensters getoond, zonder externe programma’s te starten of bestanden naar het bureaublad te schrijven. Er zijn maximaal drie pop-ups tegelijk; afbeeldingsvensters sluiten automatisch na 12 seconden en bij afsluiten van de app.
+- De illustraties zijn gegenereerde fanillustraties; de zes personagegeluiden en Freddy-lach zijn origineel gesynthetiseerd. Er zijn geen gamebestanden gedownload.
+- Windows-buildscript blijft Python 3.13 gebruiken. Er is geen uitgevoerde Windows-build op deze Linux-machine. De echte globale Escape-toets, Windows-audio, systeemvak en meerdere fysieke monitors moeten op Windows worden gecontroleerd; de tests gebruiken gesimuleerde toetsstatus voor de globale Windows-toets.

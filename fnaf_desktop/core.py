@@ -5,7 +5,7 @@ from pathlib import Path
 NAMES = ('Freddy', 'Bonnie', 'Chica', 'Foxy', 'Golden Freddy', 'Springtrap')
 DEFAULT = dict(characters=list(NAMES), count=6, speed=1.0, event_chance=.3,
                jumpscares=True, volume=.15, silent=False, mode='normal',
-               startup=False, system_volume=False)
+               startup=False, system_volume=False, image_popups=True)
 
 def normalize(raw):
     s = DEFAULT.copy()
@@ -20,7 +20,7 @@ def normalize(raw):
         except (ValueError, TypeError):
             s[k] = DEFAULT[k]
     s['count'] = int(s['count'])
-    for k in ('jumpscares', 'silent', 'startup', 'system_volume'):
+    for k in ('jumpscares', 'silent', 'startup', 'system_volume', 'image_popups'):
         s[k] = s[k] if type(s[k]) is bool else DEFAULT[k]
     if s['mode'] not in ('normal', 'calm', 'chaos'):
         s['mode'] = 'normal'
@@ -57,3 +57,18 @@ class VolumeGuard:
         if self.original is not None:
             self.endpoint.SetMasterVolumeLevelScalar(self.original, None)
             self.original = None
+
+
+class HoldToQuit:
+    """Track a continuous hold without counting key-repeat events."""
+    def __init__(self, seconds=5.0):
+        self.seconds = seconds
+        self.started = None
+
+    def update(self, pressed, now):
+        if not pressed:
+            self.started = None
+            return False
+        if self.started is None:
+            self.started = now
+        return now - self.started >= self.seconds

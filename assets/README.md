@@ -1,6 +1,6 @@
 # Afbeeldingen en geluiden
 
-De PNGs in deze map zijn speciaal voor dit project getekende placeholders. Er zijn geen originele game-assets gedownload. De scripts en deze placeholderbeelden/-geluiden mogen vrij worden aangepast voor dit project; de FNAF-personages en merknamen blijven eigendom van hun respectieve rechthebbenden.
+De PNGs in deze map zijn speciaal voor dit project gegenereerde gedetailleerde fanillustraties. `character_atlas.png` bevat de bronillustraties; de transparante sprites en zes camerabeelden zijn daaruit opgebouwd. Er zijn geen originele game-assets gedownload. De scripts en deze placeholderbeelden/-geluiden mogen vrij worden aangepast voor dit project; de FNAF-personages en merknamen blijven eigendom van hun respectieve rechthebbenden.
 
 Per personage een map:
 
@@ -22,3 +22,11 @@ Optionele WAV-bestanden direct in `assets/`:
 Gebruik PCM-WAV, bijvoorbeeld mono 16-bit 22050 Hz. Zonder eigen audio genereert de app korte zachte synthetische geluiden in zijn eigen instellingenmap. Langere aangepaste jumpscaregeluiden worden bij het sluiten van de overlay gestopt.
 
 Genereer de originele placeholders opnieuw met `python tools/generate_assets.py` vanuit de projectmap (dit overschrijft bestaande sprites). Voeg alleen bestanden toe die je mag gebruiken.
+
+## Nieuwe meegeleverde bestanden
+
+- `popups/*.png`: zes FNAF-camerabeelden voor willekeurige afbeeldingsvensters. Voeg eigen PNGs toe en herstart de app. De beelden openen in de app zelf en verdwijnen automatisch.
+- Alle zes `*_scare.wav` zijn aanwezig: originele synthetische geluiden met verschillende toonhoogte, metaal- en ruisklanken per personage; geen originele game-opnamen.
+- `freddy.wav` is een korte synthetische lach.
+
+`python tools/generate_assets.py` bouwt PNGs opnieuw uit de meegeleverde atlas. `python tools/generate_sounds.py` bouwt de eigen WAVs opnieuw. Beide overschrijven alleen de bijbehorende bestanden in assets; gebruik ze niet als je eigen vervangende assets wilt bewaren.

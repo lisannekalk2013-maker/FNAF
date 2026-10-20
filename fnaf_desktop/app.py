@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QDialog, QVBoxLayout, QLab
     QCheckBox, QSlider, QSpinBox, QComboBox, QPushButton, QSystemTrayIcon, QMenu, QMessageBox, QScrollArea)
 from .core import NAMES, load, save, settings_path
 from .audio import Audio
+from .emergency import EscapeExit
 
 COLORS = ['#986331', '#7954ad', '#e4c144', '#b44c38', '#c7a63f', '#79834d']
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent.parent))
@@ -101,7 +102,8 @@ class Pet(QWidget):
         silhouette.fill(Qt.GlobalColor.transparent)
         painter = QPainter(silhouette)
         if self.frames:
-            painter.drawPixmap(self.rect(), self.frames[0])
+            for frame in self.frames:
+                painter.drawPixmap(self.rect(), frame)
         else:
             draw_character(painter, name)
         painter.end()
@@ -111,7 +113,7 @@ class Pet(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         if self.frames:
-            p.drawPixmap(self.rect(), self.frames[(self.frame//4) % len(self.frames)])
+            p.drawPixmap(self.rect(), self.frames[0 if self.state == 'watch' else (self.frame//4) % len(self.frames)])
         else:
             draw_character(p, self.name, self.frame if self.state not in ('watch', 'hide') else 0)
 
@@ -267,7 +269,7 @@ class Settings(QDialog):
         scroll.setWidget(panel)
         outer.addWidget(scroll)
         self.resize(460, min(740, c.app.primaryScreen().availableGeometry().height()-60))
-        layout.addWidget(QLabel('Alleen gebruiken met toestemming van de eigenaar.\nStop altijd met Ctrl+Shift+Q of de knop Afsluiten.'))
+        layout.addWidget(QLabel('Alleen gebruiken met toestemming van de eigenaar.\nStop: houd Esc 5 seconden ingedrukt, of Ctrl+Shift+Q.'))
         self.characters = {}
         for name in NAMES:
             box = QCheckBox(name)
@@ -291,7 +293,7 @@ class Settings(QDialog):
             layout.addWidget(value_label)
             self.sliders[key] = slider
         self.checks = {}
-        for key, label in [('jumpscares', 'Jumpscares bij klikken'), ('silent', 'Volledig stil'), ('system_volume', 'Systeemvolume tijdelijk begrenzen (Windows)'), ('startup', 'Opstarten met Windows (alleen na bevestiging)')]:
+        for key, label in [('image_popups', 'Willekeurige FNAF-afbeeldingen'), ('jumpscares', 'Jumpscares bij klikken'), ('silent', 'Volledig stil'), ('system_volume', 'Systeemvolume tijdelijk begrenzen (Windows)'), ('startup', 'Opstarten met Windows (alleen na bevestiging)')]:
             box = QCheckBox(label)
             box.setChecked(c.settings[key])
             if sys.platform != 'win32' and key in ('startup', 'system_volume'):
@@ -309,6 +311,10 @@ class Settings(QDialog):
         self.mode.setCurrentText(c.settings['mode'])
         layout.addWidget(QLabel('Modus: normal / calm (rustig) / chaos'))
         layout.addWidget(self.mode)
+        self.sound_choice = QComboBox()
+        self.sound_choice.addItems(NAMES)
+        layout.addWidget(QLabel('Personage voor geluidstest'))
+        layout.addWidget(self.sound_choice)
         for label, callback in [('Volume testen', self.test), ('Instellingen toepassen', self.apply)]:
             b = QPushButton(label)
             b.clicked.connect(callback)
@@ -323,7 +329,7 @@ class Settings(QDialog):
                     **{k: b.isChecked() for k, b in self.checks.items()})
 
     def test(self):
-        self.c.audio.play('scare', self.values(), True)
+        self.c.audio.play(self.sound_choice.currentText().lower().replace(' ', '_') + '_scare', self.values(), True)
         QTimer.singleShot(1500, self.c.audio.stop)
 
     def apply(self):
@@ -348,9 +354,13 @@ class Controller:
         self.settings = load(settings_path())
         self.pets, self.scare_windows, self.popups = [], [], []
         self.scaring = False
+        self.closing = False
+        self.next_image = time.monotonic() + random.uniform(12, 25)
+        self.image_paths = sorted((ASSETS / "popups").glob("*.png"))
         self.audio = Audio(app, settings_path().parent / 'audio', ASSETS)
         self.menu = QMenu()
         self.menu.addAction('Instellingen', self.open_settings)
+        self.menu.addAction('FNAF-afbeelding tonen', self.image_popup)
         self.menu.addAction('Alles pauzeren / hervatten', self.pause)
         self.menu.addAction('Afsluiten (Ctrl+Shift+Q)', app.quit)
         icon = QPixmap(110, 150)
@@ -363,7 +373,8 @@ class Controller:
         self.tray.setToolTip('FNAF Desktop — Ctrl+Shift+Q om af te sluiten')
         self.tray.show()
         self.dialog = Settings(self)
-        self.dialog.finished.connect(lambda _: QTimer.singleShot(0, self.dialog.show) if not QSystemTrayIcon.isSystemTrayAvailable() else None)
+        self.dialog.finished.connect(lambda _: QTimer.singleShot(0, self.show_without_tray) if not self.closing and not QSystemTrayIcon.isSystemTrayAvailable() else None)
+        self.emergency = EscapeExit(app, self.quit)
         self.hotkey = Hotkey(self)
         app.installNativeEventFilter(self.hotkey)
         self.paused = False
@@ -383,6 +394,14 @@ class Controller:
             self.settings['jumpscares'] = False
             self.dialog.checks['jumpscares'].setChecked(False)
             QMessageBox.warning(self.dialog, 'Sneltoets niet beschikbaar', 'Ctrl+Shift+Q kon niet worden geregistreerd. Jumpscares zijn uitgeschakeld. Sluit af via instellingen of systeemvak.')
+
+    def show_without_tray(self):
+        if not self.closing:
+            self.dialog.show()
+
+    def quit(self):
+        self.cleanup()
+        self.app.quit()
 
     def open_settings(self):
         self.dialog.show()
@@ -411,6 +430,10 @@ class Controller:
     def tick(self):
         now = time.monotonic()
         dt, self.last = min(.1, now-self.last), now
+        if not self.paused and not self.scaring and now >= self.next_image:
+            self.next_image = now + random.uniform(12, 25) * (2 if self.settings['mode'] == 'calm' else .5 if self.settings['mode'] == 'chaos' else 1)
+            if self.settings['image_popups'] and random.random() < self.settings['event_chance']:
+                self.image_popup()
         if not self.paused:
             for pet in self.pets:
                 pet.tick(dt, now)
@@ -457,7 +480,46 @@ class Controller:
                 label.deleteLater()
         QTimer.singleShot(3000, remove)
 
+    def image_popup(self):
+        if self.closing or self.paused or self.scaring or len(self.popups) >= 3 or not self.image_paths:
+            return
+        path = random.choice(self.image_paths)
+        image = QPixmap(str(path))
+        if image.isNull():
+            return
+        window = QDialog(None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        window.setWindowTitle('FNAF — ' + path.stem.replace('_', ' '))
+        window.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        window.setStyleSheet('background:#14151a;color:#eadbb7')
+        layout = QVBoxLayout(window)
+        screen = random.choice(self.app.screens())
+        area = screen.availableGeometry()
+        label = QLabel()
+        label.setPixmap(image.scaled(max(1, min(360, area.width()-90)), max(1, min(270, area.height()-140)), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        layout.addWidget(label)
+        close = QPushButton('Sluiten ×')
+        close.clicked.connect(window.close)
+        layout.addWidget(close)
+        window.adjustSize()
+        window.move(random.randint(area.left(), max(area.left(), area.right()-window.width())), random.randint(area.top(), max(area.top(), area.bottom()-window.height())))
+        self.popups.append(window)
+        def forget(_=0):
+            if window in self.popups:
+                self.popups.remove(window)
+            window.deleteLater()
+        window.finished.connect(forget)
+        expiry = QTimer(window)
+        expiry.setSingleShot(True)
+        expiry.timeout.connect(window.close)
+        expiry.start(12000)
+        window.show()
+
     def cleanup(self):
+        if self.closing:
+            return
+        self.closing = True
+        self.emergency.close()
+        self.dialog.status_timer.stop()
         self.timer.stop()
         self.end_scare()
         self.hotkey.close()
