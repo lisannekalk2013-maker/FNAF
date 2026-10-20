@@ -14,6 +14,8 @@ Gebruik uitsluitend op een computer waarvan de eigenaar toestemming heeft gegeve
 
 Het tweede artifact **FNAFDesktop-Chaos-2.0-Windows-ZIP** bevat de apart gemaakte complete Windows-ZIP. Na het downloaden hiervan zit de Windows-ZIP in de artifact-ZIP.
 
+De eerste Windows-build van Chaos 2.0 is geslaagd: [open de geteste build en downloads](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/39481454031).
+
 De [ZIP onder downloads/](downloads/FNAF-project.zip) bevat **broncode**, geen vooraf gebouwde Windows-EXE. Als een workflow rood is, open de mislukte stap voor de foutmelding; de ZIP wordt alleen als artifact aangeboden na een geslaagde build en EXE-smoketest. Een geslaagde offscreen-buildtest bevestigt nog niet alle fysieke Windows-desktopfuncties.
 
 ## Afsluiten en pauzeren
@@ -113,4 +115,4 @@ Er zijn geen administratorrechten nodig. De build is niet ondertekend: schakel b
 
 De regressietests controleren beweging, vloeiend fetchgedrag, eigendom, stelen, Foxy/Freddy-achtervolging, Bonnie/Chica-voorkeuren, glitch-herstel, beeldlimieten en opruimen, speciale gebeurtenissen, cooldown, media-overrides, Custom Night, legacyconfig-migratie, pauze en echte procesafsluiting. Er is ook een stille GUI-smoketest: `python run.py --smoke`. Zie [VALIDATIE.md](VALIDATIE.md) voor daadwerkelijk uitgevoerde controles.
 
-Fysieke audio, Windows globale sneltoetsen, hoge DPI op meerdere monitors en interactie met andere Windows-apps vereisen een echte Windows-desktoptest. In de cloud is de GitHub Actions-API niet bereikbaar; controleer de nieuwste buildstatus en artifacts op GitHub. Een push of opgeslagen workflow is geen bewijs van een geslaagde Windows-build.
+Fysieke audio, Windows globale sneltoetsen, hoge DPI op meerdere monitors en interactie met andere Windows-apps vereisen een echte Windows-desktoptest. De native Windows-build en de zelfstandige EXE-smoketest zijn op GitHub Actions geslaagd; de run is hierboven gelinkt. De Actions-API was niet bereikbaar vanuit de cloud, maar de openbare webpagina bevestigde de uitslag en beide artifacts. Controleer bij latere updates altijd de nieuwe builduitslag.
