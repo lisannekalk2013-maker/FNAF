@@ -1,0 +1,59 @@
+import json
+import os
+from pathlib import Path
+
+NAMES = ('Freddy', 'Bonnie', 'Chica', 'Foxy', 'Golden Freddy', 'Springtrap')
+DEFAULT = dict(characters=list(NAMES), count=6, speed=1.0, event_chance=.3,
+               jumpscares=True, volume=.15, silent=False, mode='normal',
+               startup=False, system_volume=False)
+
+def normalize(raw):
+    s = DEFAULT.copy()
+    s.update({k: v for k, v in raw.items() if k in s})
+    s['characters'] = [n for n in s['characters'] if n in NAMES] if isinstance(s['characters'], list) else list(NAMES)
+    for k, lo, hi in [('count', 1, 12), ('speed', .2, 3), ('event_chance', 0, 1), ('volume', 0, .5)]:
+        try:
+            value = float(s[k])
+            if not __import__('math').isfinite(value):
+                raise ValueError()
+            s[k] = max(lo, min(hi, value))
+        except (ValueError, TypeError):
+            s[k] = DEFAULT[k]
+    s['count'] = int(s['count'])
+    for k in ('jumpscares', 'silent', 'startup', 'system_volume'):
+        s[k] = s[k] if type(s[k]) is bool else DEFAULT[k]
+    if s['mode'] not in ('normal', 'calm', 'chaos'):
+        s['mode'] = 'normal'
+    return s
+
+def settings_path():
+    return Path(os.getenv('LOCALAPPDATA', str(Path.home() / '.config'))) / 'FNAFDesktop' / 'settings.json'
+
+def load(path):
+    try:
+        return normalize(json.loads(path.read_text(encoding='utf8')))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return normalize({})
+
+def save(path, settings):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix('.tmp')
+    temp.write_text(json.dumps(normalize(settings), indent=2), encoding='utf8')
+    temp.replace(path)
+
+class VolumeGuard:
+    """Only lower endpoint volume; restore it even after playback failure."""
+    def __init__(self, endpoint=None):
+        self.endpoint = endpoint
+        self.original = None
+
+    def begin(self, maximum):
+        self.restore()
+        if self.endpoint is not None:
+            self.original = self.endpoint.GetMasterVolumeLevelScalar()
+            self.endpoint.SetMasterVolumeLevelScalar(min(self.original, max(0, min(.5, maximum))), None)
+
+    def restore(self):
+        if self.original is not None:
+            self.endpoint.SetMasterVolumeLevelScalar(self.original, None)
+            self.original = None

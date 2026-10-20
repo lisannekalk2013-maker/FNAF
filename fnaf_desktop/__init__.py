@@ -1,0 +1,1 @@
+"""Consent-based desktop companions."""
