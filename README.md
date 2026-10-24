@@ -6,6 +6,8 @@ Er is **geen systeemvakpictogram** en instellingen verschijnen alleen op verzoek
 
 ## Downloaden en starten zonder Python-opdrachten
 
+**[Open de geslaagde V3.0-build met Windows-downloads](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40104314488)** (24 oktober 2026). Tests, EXE-start/afloop en de meegebouwde pictogramlezer zijn geslaagd.
+
 1. Open [Actions → Build Windows EXE](https://github.com/lisannekalk2013-maker/FNAF/actions/workflows/windows-exe.yml).
 2. Open de nieuwste **geslaagde** uitvoering voor `main` met V3.0-code.
 3. Klik onder **Artifacts** op **FNAFDesktop-Windows**. Hiervoor moet je bij GitHub ingelogd zijn.

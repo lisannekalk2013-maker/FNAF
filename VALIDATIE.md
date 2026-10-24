@@ -1,6 +1,10 @@
 # Validatie FNAF Desktop V3.0
 
-De V3-code is uitgebreid vanuit de bestaande app; de eerdere Windows-build van V2 is geen bewijs voor V3. De actuele V3-build staat bij [GitHub Actions](https://github.com/lisannekalk2013-maker/FNAF/actions/workflows/windows-exe.yml).
+De V3-code is uitgebreid vanuit de bestaande app. Op 24 oktober 2026 is [de native V3 Windows-build](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40104314488) geslaagd voor codecommit `c38fbf724cb579f080aff442f8caaa90afcffeb6`.
+
+De Windows-installatie, tests inclusief vensterherkenning, PyInstaller-build, ZIP-verpakking, zelfstandige stille EXE-test en meegebouwde UI Automation-helper zijn geslaagd. Beide artifacts zijn gepubliceerd: `FNAFDesktop-Windows` en `FNAFDesktop-V3.0-Windows-ZIP`. De openbare GitHub-jobpagina bevestigde alle stappen en het eindresultaat Success; de Actions-API was niet bereikbaar vanuit de cloudproxy.
+
+De laatste documentatie-/broncode-ZIP-update wijzigt deze geteste applicatiecode niet.
 
 ## Uitgevoerde en geautomatiseerde controles
 
