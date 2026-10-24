@@ -1,7 +1,7 @@
 import pytest
 from fnaf_desktop.core import normalize, load, save
 
-@pytest.mark.parametrize('value,expected', [(1, .5), (-1, 0), ('bad', .15), (float('nan'), .15)])
+@pytest.mark.parametrize('value,expected', [(1, 1), (2, 1), (-1, 0), ('bad', .15), (float('nan'), .15)])
 def test_volume_clamped(value, expected):
     assert normalize({'volume': value})['volume'] == expected
 

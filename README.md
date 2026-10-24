@@ -53,6 +53,8 @@ De lezer draait kort in een afzonderlijk proces met een timeout en wordt bij afs
 
 ### Jumpscares, Golden Freddy en groepen
 
+De optie **Tijdens jumpscares naar 100% appvolume** staat standaard aan, ook bij het laden van oudere instellingen. Tijdens de jumpscare gebruiken WAV-geluiden en ingebouwde videoaudio 100% appvolume; overige geluiden behouden hun eigen instelling. Dempen heeft voorrang. Je Windows-hoofdvolume blijft ongewijzigd. Zet de optie uit onder **Geluid & systeem** om zelf het jumpscarevolume (0–1) te kiezen.
+
 Ieder personage heeft een eigen gezicht/geluid en cooldown. Hoogstens één jumpscare tegelijk speelt, met een klein cameratrileffect binnen de overlay en automatische afloop. Meerdere monitoren delen één audiobron. Optionele automatische jumpscares hebben een instelbare kans per 20–40 seconden; deze optie staat standaard uit.
 
 Golden Freddy heeft korte kijkverschijningen, verschijningen achter vensters, `IT'S ME`, optionele gezichtseffecten en een zeldzame ontmoeting die alle figuren tijdelijk laat stilstaan. De Golden-instelling beïnvloedt de zeldzame ontmoetingen en losse verschijningen; activiteit beïnvloedt ook zijn gedrag. Korte flits-/ruis-/verduisteringseffecten staan standaard uit. Ontmoetingen gebruiken een geleidelijke fade, geen snelle stroboscoop.

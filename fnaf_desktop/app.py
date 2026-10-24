@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, QTimer, QPoint, QAbstractNativeEventFilter, QLock
 from PySide6.QtGui import QColor, QPainter, QPen, QCursor, QPixmap, QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QWidget, QDialog, QVBoxLayout, QLabel,
     QCheckBox, QSlider, QSpinBox, QComboBox, QPushButton, QMenu, QMessageBox, QScrollArea)
-from .core import NAMES, load, save, settings_path, normalize
+from .core import NAMES, load, save, settings_path, normalize, jumpscare_volume
 from .audio import Audio
 from .emergency import EscapeExit
 from .images import ImageManager
@@ -259,7 +259,7 @@ class Scare(QWidget):
             self.player.setVideoOutput(self.video_widget)
             if primary and not c.scare_wav:
                 output = QAudioOutput(self)
-                output.setVolume(min(.5, c.settings['volume']))
+                output.setVolume(jumpscare_volume(c.settings))
                 output.setMuted(c.settings['silent'])
                 self.player.setAudioOutput(output)
             self.player.setSource(QUrl.fromLocalFile(str(video.resolve())))

@@ -45,5 +45,6 @@
   "performance_mode": false,
   "auto_jumpscares": false,
   "auto_scare_chance": 0.02,
-  "sprite_scale": 1.0
+  "sprite_scale": 1.0,
+  "jumpscare_full_volume": true
 }

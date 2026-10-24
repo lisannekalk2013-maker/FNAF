@@ -5,6 +5,7 @@ import wave
 from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QSoundEffect
+from .core import jumpscare_volume
 
 class Audio:
     def __init__(self, parent, folder, assets):
@@ -45,7 +46,7 @@ class Audio:
             custom = self.resolve(name)
             path = custom if custom else self.folder / ('scare.wav' if scare else 'ambient.wav')
             self.effect.setSource(QUrl.fromLocalFile(str(path.resolve())))
-            self.effect.setVolume(settings['volume'] if scare else min(settings.get('ambient_volume', .08), .5))
+            self.effect.setVolume(jumpscare_volume(settings) if scare else min(settings.get('ambient_volume', .08), .5))
             return True
         except Exception as exc:
             self.error = str(exc)

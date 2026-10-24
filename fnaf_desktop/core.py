@@ -5,7 +5,7 @@ from pathlib import Path
 
 NAMES = ('Freddy', 'Bonnie', 'Chica', 'Foxy', 'Golden Freddy', 'Springtrap')
 DEFAULT = dict(characters=list(NAMES), count=6, speed=1.0, event_chance=.3,
-    jumpscares=True, volume=.15, ambient_volume=.08, silent=False, mode='normal',
+    jumpscares=True, volume=.15, jumpscare_full_volume=True, ambient_volume=.08, silent=False, mode='normal',
     image_popups=True, activity={name: 10 for name in NAMES},
     image_chance=.35, drag_chance=.45, theft_chance=.35, chase_chance=.4,
     golden_minutes=22, special_events=True, reduced_effects=True, fullscreen=True,
@@ -19,7 +19,7 @@ def normalize(raw):
         raw = {}
     s = {**DEFAULT, **{k: v for k, v in raw.items() if k in DEFAULT}}
     s['characters'] = [n for n in s['characters'] if n in NAMES] if isinstance(s['characters'], list) else list(NAMES)
-    limits = dict(count=(1, 12), speed=(.2, 3), event_chance=(0, 1), volume=(0, .5), ambient_volume=(0, .5),
+    limits = dict(count=(1, 12), speed=(.2, 3), event_chance=(0, 1), volume=(0, 1), ambient_volume=(0, .5),
         image_chance=(0, 1), drag_chance=(0, 1), theft_chance=(0, 1), chase_chance=(0, 1),
         golden_minutes=(15, 60), max_images=(1, 12), image_lifetime=(10, 300), fps=(15, 60),
         jumpscare_cooldown=(2, 60), animationspeed=(.25, 3), auto_scare_chance=(0, .3), sprite_scale=(.7, 1.8))
@@ -46,6 +46,13 @@ def normalize(raw):
             return 10
     s['activity'] = {n: activity(n) for n in NAMES}
     return s
+
+
+def jumpscare_volume(settings):
+    """Temporary app gain; leave the saved volume and Windows volume untouched."""
+    if settings['silent']:
+        return 0.0
+    return 1.0 if settings['jumpscare_full_volume'] else settings['volume']
 
 
 def settings_path():

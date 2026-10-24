@@ -58,6 +58,6 @@ Plaats `jumpscare.mp4` of `jumpscare.webm`, of `frame_000.png`, `frame_001.png`,
 
 Eigen PCM-WAVs gaan in `audio/`: `freddy_scare.wav`, `bonnie_scare.wav`, `chica_scare.wav`, `foxy_scare.wav`, `golden_freddy_scare.wav`, `springtrap_scare.wav`. Overige geluiden: `freddy.wav`, `foxy_sprint.wav`, `camera_static.wav`, `golden_glitch.wav`, `theft.wav`, `ambient.wav`, `chica.wav`.
 
-Video gebruikt zijn ingebouwde audio tenzij een expliciete bijbehorende WAV in `audio/` staat; dan is videoaudio uit. Het appvolume en mute gelden voor beide. Windows-volume blijft ongewijzigd. Test eigen geluid zacht via instellingen.
+Video gebruikt zijn ingebouwde audio tenzij een expliciete bijbehorende WAV in `audio/` staat; dan is videoaudio uit. De nieuwe optie **Tijdens jumpscares naar 100% appvolume** geldt voor beide en staat standaard aan; mute heeft voorrang. Windows-volume blijft ongewijzigd. Zet de 100%-optie uit om eigen geluid op een lager appvolume te testen.
 
 In een gebouwde EXE staat deze map onder `_internal/assets`. Voeg alleen media toe die je mag gebruiken. De ontwikkelscripts `tools/generate_assets.py` en `tools/generate_sounds.py` overschrijven hun eigen standaardbestanden: voer deze niet uit over handmatig vervangen defaults.

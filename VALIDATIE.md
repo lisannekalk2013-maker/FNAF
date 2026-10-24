@@ -6,9 +6,11 @@ De Windows-installatie, tests inclusief vensterherkenning, PyInstaller-build, ZI
 
 De laatste documentatie-/broncode-ZIP-update wijzigt deze geteste applicatiecode niet.
 
+De appvolume-update is lokaal gecontroleerd: 100% tijdens WAV-jumpscares, dezelfde volumeregel voor ingebouwde videoaudio, normale geluiden daarna op hun eigen volume, mute en het opslaan/uitschakelen van de optie. Bestaande persoonlijke volumewaarden blijven bewaard.
+
 ## Uitgevoerde en geautomatiseerde controles
 
-- Op 24 oktober 2026: **55 tests geslaagd, 1 Windows-test overgeslagen** met Python 3.13 en PySide6 6.8.3 in de Linux-cloud, Qt offscreen.
+- Op 24 oktober 2026: **61 tests geslaagd, 1 Windows-test overgeslagen** met Python 3.13 en PySide6 6.8.3 in de Linux-cloud, Qt offscreen.
 - De echte app gestart met `--smoke`: stille jumpscare, automatische afloop en procesafsluiting geslaagd.
 - Alle 62 meegeleverde PNG-bestanden gedecodeerd en alle 13 WAV-bestanden gecontroleerd: leesbaar.
 - Regressiecontrole op bestaande afbeeldingstaken, eigendom, stelen, trekspel, achtervolgen, voorkeuren, glitch-herstel, media-overrides, configuratie en speciale events.

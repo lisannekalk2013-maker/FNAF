@@ -99,7 +99,7 @@ def test_audio_uses_only_app_volume(controller, fail):
     c=controller
     sound=FakeSound();sound.fail=fail
     c.audio.effect=sound
-    c.audio.play('freddy_scare',dict(c.settings,silent=False,volume=.15),True)
+    c.audio.play('freddy_scare',dict(c.settings,silent=False,volume=.15,jumpscare_full_volume=False),True)
     assert sound.volume == .15
     assert not hasattr(c.audio,'guard')
     if fail: assert not sound.active and c.audio.error
@@ -107,6 +107,53 @@ def test_audio_uses_only_app_volume(controller, fail):
         assert sound.active
         c.audio.stop()
         assert not sound.active
+
+
+def test_full_volume_jumpscare_then_ambient_and_mute(controller):
+    c=controller
+    c.audio.effect=FakeSound()
+    c.settings.update(silent=False,jumpscare_full_volume=True,volume=.15,ambient_volume=.08)
+    c.scare(c.pets[0])
+    QTest.qWait(250)
+    assert c.scaring and c.audio.effect.active and c.audio.effect.volume==1
+    c.end_scare()
+    assert not c.audio.effect.active and c.settings['volume']==.15
+    c.audio.play('ambient',c.settings)
+    assert c.audio.effect.active and c.audio.effect.volume==.08
+    c.settings['silent']=True
+    c.audio.play('freddy_scare',c.settings,True)
+    assert not c.audio.effect.active
+
+
+@pytest.mark.parametrize('boost,silent,expected', [(True,False,1), (False,False,.15), (True,True,0)])
+def test_video_uses_same_jumpscare_volume(controller,tmp_path,boost,silent,expected):
+    from fnaf_desktop.app import Scare
+    c=controller
+    c.settings.update(jumpscare_full_volume=boost,silent=silent,volume=.15)
+    c.scare_media=(tmp_path/'not-playing.mp4',[],c.assets/'freddy'/'scare.png')
+    c.scare_wav=None
+    window=Scare(c,'Freddy',c.app.primaryScreen(),primary=True)
+    try:
+        output=window.player.audioOutput()
+        assert output.volume()==pytest.approx(expected)
+        assert output.isMuted()==silent
+    finally:
+        window.close()
+        window.deleteLater()
+
+
+def test_full_volume_setting_migration_and_roundtrip(controller):
+    from fnaf_desktop.core import normalize,load,settings_path
+    c=controller
+    assert normalize({'volume':.15})['jumpscare_full_volume'] is True
+    assert c.dialog.checks['jumpscare_full_volume'].isChecked()
+    assert not c.dialog.controls['volume'].isEnabled()
+    c.dialog.checks['jumpscare_full_volume'].setChecked(False)
+    assert c.dialog.controls['volume'].isEnabled()
+    c.dialog.controls['volume'].setValue(.8)
+    c.dialog.apply()
+    saved=load(settings_path())
+    assert saved['jumpscare_full_volume'] is False and saved['volume']==.8
 
 
 def test_random_image_popups_close_and_limit(controller, monkeypatch):

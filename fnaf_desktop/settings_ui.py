@@ -68,6 +68,7 @@ class Settings(QDialog):
             ('Effecten', 'jumpscares', 'Jumpscares bij klikken'),
             ('Effecten', 'fullscreen', 'Fullscreen jumpscares (uit = kleiner venster)'),
             ('Geluid & systeem', 'silent', 'Volledig stil'),
+            ('Geluid & systeem', 'jumpscare_full_volume', 'Tijdens jumpscares naar 100% appvolume'),
             ('Custom Night', 'window_interactions', 'Interactie met Windows-vensters'),
             ('Custom Night', 'cursor_interactions', 'Cursorinteracties'),
             ('Custom Night', 'group_activities', 'Samenwerken / groepsactiviteiten'),
@@ -79,8 +80,10 @@ class Settings(QDialog):
             box.setChecked(c.settings[key])
             forms[group].addRow(box)
             self.checks[key] = box
-        for key, label in [('volume', 'Jumpscarevolume (0–0,50)'), ('ambient_volume', 'Overig geluid (0–0,50)')]:
-            self.add_number(forms['Geluid & systeem'], key, label, 0, .5)
+        for key, label, maximum in [('volume', 'Jumpscarevolume zonder 100%-optie (0–1)', 1), ('ambient_volume', 'Overig geluid (0–0,50)', .5)]:
+            self.add_number(forms['Geluid & systeem'], key, label, 0, maximum)
+        self.controls['volume'].setEnabled(not self.checks['jumpscare_full_volume'].isChecked())
+        self.checks['jumpscare_full_volume'].toggled.connect(lambda checked:self.controls['volume'].setEnabled(not checked))
         self.sound_choice = QComboBox()
         self.sound_choice.addItems(NAMES)
         forms['Geluid & systeem'].addRow('Personage voor geluidstest', self.sound_choice)
