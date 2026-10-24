@@ -6,7 +6,7 @@ Er is **geen systeemvakpictogram** en instellingen verschijnen alleen op verzoek
 
 ## Downloaden en starten zonder Python-opdrachten
 
-**[Open de geslaagde V3.0-build met Windows-downloads](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40104314488)** (24 oktober 2026). Tests, EXE-start/afloop en de meegebouwde pictogramlezer zijn geslaagd.
+**[Open de geslaagde V3.0-build met Windows-downloads](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40105011847)** (24 oktober 2026). Tests, EXE-start/afloop en de meegebouwde pictogramlezer zijn geslaagd.
 
 1. Open [Actions → Build Windows EXE](https://github.com/lisannekalk2013-maker/FNAF/actions/workflows/windows-exe.yml).
 2. Open de nieuwste **geslaagde** uitvoering voor `main` met V3.0-code.

@@ -1,12 +1,12 @@
 # Validatie FNAF Desktop V3.0
 
-De V3-code is uitgebreid vanuit de bestaande app. Op 24 oktober 2026 is [de native V3 Windows-build](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40104314488) geslaagd voor codecommit `c38fbf724cb579f080aff442f8caaa90afcffeb6`.
+De V3-code is uitgebreid vanuit de bestaande app. Op 24 oktober 2026 is [de native V3 Windows-build](https://github.com/lisannekalk2013-maker/FNAF/actions/runs/40105011847) geslaagd voor codecommit `092de2cb392f713b3b17e1cd48740004d5001bca`.
 
 De Windows-installatie, tests inclusief vensterherkenning, PyInstaller-build, ZIP-verpakking, zelfstandige stille EXE-test en meegebouwde UI Automation-helper zijn geslaagd. Beide artifacts zijn gepubliceerd: `FNAFDesktop-Windows` en `FNAFDesktop-V3.0-Windows-ZIP`. De openbare GitHub-jobpagina bevestigde alle stappen en het eindresultaat Success; de Actions-API was niet bereikbaar vanuit de cloudproxy.
 
 De laatste documentatie-/broncode-ZIP-update wijzigt deze geteste applicatiecode niet.
 
-De appvolume-update is lokaal gecontroleerd: 100% tijdens WAV-jumpscares, dezelfde volumeregel voor ingebouwde videoaudio, normale geluiden daarna op hun eigen volume, mute en het opslaan/uitschakelen van de optie. Bestaande persoonlijke volumewaarden blijven bewaard.
+De appvolume-update is lokaal en in de native Windows-tests gecontroleerd: 100% tijdens WAV-jumpscares, dezelfde volumeregel voor ingebouwde videoaudio, normale geluiden daarna op hun eigen volume, mute en het opslaan/uitschakelen van de optie. Bestaande persoonlijke volumewaarden blijven bewaard.
 
 ## Uitgevoerde en geautomatiseerde controles
 
