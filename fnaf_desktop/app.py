@@ -1,17 +1,14 @@
 import ctypes
-import json
 import math
-import os
 from pathlib import Path
 import random
-import subprocess
 import sys
 import time
 
 from PySide6.QtCore import Qt, QTimer, QPoint, QAbstractNativeEventFilter, QLockFile, QUrl
 from PySide6.QtGui import QColor, QPainter, QPen, QCursor, QPixmap, QIcon, QAction
 from PySide6.QtWidgets import (QApplication, QWidget, QDialog, QVBoxLayout, QLabel,
-    QCheckBox, QSlider, QSpinBox, QComboBox, QPushButton, QSystemTrayIcon, QMenu, QMessageBox, QScrollArea)
+    QCheckBox, QSlider, QSpinBox, QComboBox, QPushButton, QMenu, QMessageBox, QScrollArea)
 from .core import NAMES, load, save, settings_path, normalize
 from .audio import Audio
 from .emergency import EscapeExit
@@ -20,6 +17,10 @@ from .behaviour import BehaviourDirector
 from .media import image_files, scare_source, safe_pixmap, IMAGE_EXTENSIONS
 from .events import EventManager
 from .settings_ui import Settings
+from .motion import Motion, steer
+from .animation import Animator
+from .world import WindowWorld
+from .desktop_images import DesktopImages
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
@@ -92,8 +93,16 @@ class Pet(QWidget):
         super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.c, self.name, self.screen = controller, name, screen
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(110, 150)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        scale=controller.settings['sprite_scale']*max(.8,min(1.4,screen.availableGeometry().height()/1080))
+        self.setFixedSize(round(110*scale),round(180*scale))
+        self.motion=Motion()
+        self.look=0
+        self.pose_progress=0
+        self.confused_until=0
+        self.roam_target=None
         self.frame = 0
+        self.animation_clock = 0
         self.direction = random.choice((-1, 1))
         self.state = 'walk'
         self.watch_cursor = QCursor.pos()
@@ -107,30 +116,41 @@ class Pet(QWidget):
             image = safe_pixmap(custom, 512)
             if not image.isNull():
                 self.frames = [image]
+        self.animator=Animator(ASSETS,name,self.frames)
         r = screen.availableGeometry()
-        self.posx = float(random.randint(r.left(), max(r.left(), r.right()-110)))
-        self.posy = float(random.randint(r.top(), max(r.top(), r.bottom()-150)))
+        self.posx = float(random.randint(r.left(), max(r.left(), r.right()-self.width())))
+        self.posy = float(random.randint(r.top(), max(r.top(), r.bottom()-self.height())))
         self.move(int(self.posx), int(self.posy))
-        silhouette = QPixmap(self.size())
+        # Union masks for both directions and poses; transparent pixels stay pass-through.
+        silhouette=QPixmap(self.size())
         silhouette.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(silhouette)
-        if self.frames:
-            for frame in self.frames:
-                painter.drawPixmap(self.rect(), frame)
-        else:
-            draw_character(painter, name)
+        painter=QPainter(silhouette)
+        for direction in (-1,1):
+            self.motion.facing=direction
+            for state in ('walk','sit','jump','trip','climb'):
+                self.state=state
+                for phase in (0,.5,1):
+                    self.pose_progress=phase
+                    self.animator.draw(painter,self)
         painter.end()
-        self.setMask(silhouette.mask())
+        from PySide6.QtGui import QRegion
+        self.base_mask=QRegion(silhouette.mask()) if self.frames else QRegion(self.rect())
+        for dx,dy in ((4,0),(-4,0),(0,4),(0,-4)):
+            self.base_mask=self.base_mask.united(self.base_mask.translated(dx,dy))
+        self.base_mask=self.base_mask.intersected(QRegion(self.rect()))
+        self.setMask(self.base_mask)
+        self.motion.facing=self.direction
+        self.state='walk'
         self.show()
 
     def paintEvent(self, event):
-        p = QPainter(self)
+        p=QPainter(self)
         if self.frames:
-            if len(self.frames) == 1 and self.state != 'watch':
-                p.translate(0, -abs(math.sin(self.frame*.4))*3)
-            p.drawPixmap(self.rect(), self.frames[0 if self.state == 'watch' else int(self.frame//(2 if self.state == "run" else 4)) % len(self.frames)])
+            self.animator.draw(p,self)
         else:
-            draw_character(p, self.name, self.frame if self.state not in ('watch', 'hide') else 0)
+            p.scale(self.width()/110,self.width()/110)
+            p.translate(0,30)
+            draw_character(p,self.name,self.frame)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
@@ -139,55 +159,54 @@ class Pet(QWidget):
             self.c.scare(self)
 
     def tick(self, dt, now):
-        if self.c.scaring:
+        if self.c.scaring:return
+        self.animation_clock+=dt
+        cursor=QCursor.pos()
+        if self.c.settings['cursor_interactions']:
+            self.look=max(-25,min(25,(cursor.x()-self.posx-self.width()/2)/12))
+        else:self.look=0
+        if self.c.director.tick_pet(self,dt):
+            self.update()
             return
-        if self.c.director.tick_pet(self, dt):
-            return
-        self.frame += self.c.settings['animationspeed']*dt*30
-        r = self.screen.availableGeometry()
-        cursor = QCursor.pos()
-        if self.name in ('Freddy', 'Chica') and (cursor-self.pos()-QPoint(55, 75)).manhattanLength() < 60:
-            self.state, self.until, self.watch_cursor = 'watch', now+.7, cursor
-        if self.state == 'hide':
-            if now >= self.until:
-                self.state = 'walk'
-                self.posx = float(random.choice((r.left(), max(r.left(), r.right()-110))))
-                self.show()
-            return
-        if now >= self.deadline:
-            self.deadline = now + random.uniform(3, 10)
-            chance = self.c.settings['event_chance'] * self.c.settings['activity'][self.name]/10 * {'calm': .25, 'normal': 1, 'chaos': 2}[self.c.settings['mode']]
-            if random.random() < chance:
-                self.random_event(now)
-            else:
-                self.direction *= -1
-                self.state = random.choice(('walk', 'follow', 'watch'))
-                self.until = now + random.uniform(1, 3)
-        if self.state == 'watch':
-            if now < self.until or (self.name == 'Bonnie' and (cursor-self.watch_cursor).manhattanLength() < 20):
-                self.update()
+        r=self.screen.availableGeometry()
+        if self.c.settings['cursor_interactions']:
+            if self.name=='Chica' and self.c.director.interactions.cursor_speed>1800 and now>self.confused_until:
+                self.confused_until=now+15
+                self.c.director.interactions.new(self,'trip',until=self.c.director.clock+1.5)
                 return
-            self.state = 'walk'
-        if self.state == 'run' and now > self.until:
-            self.state = 'walk'
-        speed = {'Freddy': 45, 'Bonnie': 60, 'Chica': 50, 'Foxy': 110, 'Golden Freddy': 35, 'Springtrap': 27}[self.name]
-        speed *= self.c.settings['speed'] * (2.5 if self.state == 'run' else 1)
-        if self.c.settings['mode'] == 'calm':
-            speed *= .6
-        if self.state == 'follow':
-            self.direction = 1 if cursor.x() > self.posx+55 else -1
-            if abs(cursor.x()-self.posx-55) < 35:
-                self.state = 'watch'
-                self.until = now + 2
-                self.watch_cursor = cursor
-            self.posy += max(-speed*dt, min(speed*dt, cursor.y()-self.posy-75))
-        self.posx += self.direction * speed * dt
-        if self.posx < r.left() or self.posx > r.right()-110:
-            self.direction *= -1
-        self.posx = max(r.left(), min(max(r.left(), r.right()-110), self.posx))
-        self.posy = max(r.top(), min(max(r.top(), r.bottom()-150), self.posy))
-        self.move(round(self.posx), round(self.posy))
-        self.update()
+        if self.state=='hide':
+            if now>=self.until:self.state='walk';self.show()
+            else:return
+        if now>=self.deadline:
+            self.deadline=now+random.uniform(3,9)
+            choices=['walk','walk','watch','idle','run' if self.name=='Foxy' else 'walk']
+            if self.c.settings['cursor_interactions']:choices+=['follow' if self.name in ('Bonnie','Foxy') else 'watch']
+            self.state=random.choice(choices)
+            self.until=now+random.uniform(.8,2.5)
+            self.roam_target=self.c.director.destination(self)
+            if self.c.settings['special_events'] and random.random()<.06:
+                self.random_event(now)
+                if self.state=='hide':return
+        if self.state in ('watch','idle') and now<self.until:
+            self.motion.stop();self.update();return
+        if self.state in ('watch','idle'):self.state='walk'
+        speed={'Freddy':45,'Bonnie':70,'Chica':55,'Foxy':140,'Springtrap':30}[self.name]*self.c.settings['speed']
+        if self.state=='run':speed*=2.4
+        if self.c.settings['mode']=='calm':speed*=.6
+        if self.state=='follow' and self.c.settings['cursor_interactions']:
+            dx,dy=self.posx+self.width()/2-cursor.x(),self.posy+self.height()/2-cursor.y()
+            length=max(1,math.hypot(dx,dy))
+            target=(cursor.x()+dx/length*70-self.width()/2,cursor.y()+dy/length*70-self.height()/2)
+            if self.name=='Foxy':speed*=2
+        else:
+            target=self.roam_target or (self.posx+self.direction*180,self.posy+random.uniform(-40,40))
+            self.roam_target=target
+        target=self.c.director.interactions.target(self,target)
+        if steer(self,target,dt,speed,self.state):
+            self.state='idle';self.until=now+random.uniform(.5,1.5);self.deadline=self.until;self.roam_target=None
+        self.posx=max(r.left(),min(r.right()-self.width(),self.posx))
+        self.posy=max(r.top(),min(r.bottom()-self.height(),self.posy))
+        self.move(round(self.posx),round(self.posy))
 
     def random_event(self, now):
         if self.name in ('Golden Freddy', 'Springtrap') or random.random() < .15:
@@ -276,6 +295,9 @@ class Scare(QWidget):
         elapsed = time.monotonic()-self.started
         if elapsed < .2:
             return
+        p.translate(math.sin(elapsed*41)*3,math.cos(elapsed*37)*2)
+        if self.video_widget is not None:
+            self.video_widget.move(round(math.sin(elapsed*41)*3),round(math.cos(elapsed*37)*2))
         if self.c.active_frames:
             index = min(len(self.c.active_frames)-1, int((elapsed-.2)*30))
             image = self.c.active_frames[index]
@@ -300,11 +322,15 @@ class Hotkey(QAbstractNativeEventFilter):
         self.registered = False
         if sys.platform == 'win32':
             self.registered = bool(ctypes.windll.user32.RegisterHotKey(None, 18021, 0x4006, ord('Q')))
+            self.settings_registered=bool(ctypes.windll.user32.RegisterHotKey(None,18022,0x4006,ord('S')))
 
     def nativeEventFilter(self, kind, message):
         if sys.platform == 'win32':
             from ctypes.wintypes import MSG
             msg = MSG.from_address(int(message))
+            if msg.message == 0x0312 and msg.wParam == 18022:
+                self.c.open_settings()
+                return True,0
             if msg.message == 0x0312 and msg.wParam == 18021:
                 self.c.app.quit()
                 return True, 0
@@ -313,25 +339,8 @@ class Hotkey(QAbstractNativeEventFilter):
     def close(self):
         if self.registered:
             ctypes.windll.user32.UnregisterHotKey(None, 18021)
-
-
-def startup(enabled):
-    if sys.platform != 'win32':
-        if enabled:
-            raise RuntimeError('Opstarten met Windows werkt uitsluitend op Windows.')
-        return
-    import winreg
-    command = subprocess.list2cmdline([sys.executable] if getattr(sys, 'frozen', False) else [sys.executable, str(ROOT / 'run.py')])
-    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Run') as key:
-        if enabled:
-            winreg.SetValueEx(key, 'FNAFDesktop', 0, winreg.REG_SZ, command)
-        else:
-            try:
-                winreg.DeleteValue(key, 'FNAFDesktop')
-            except FileNotFoundError:
-                pass
-
-
+        if getattr(self,'settings_registered',False):
+            ctypes.windll.user32.UnregisterHotKey(None,18022)
 
 
 class Controller:
@@ -343,11 +352,16 @@ class Controller:
         self.scaring = False
         self.active_frames = []
         self.cooldown_until = 0.0
+        self.character_cooldowns={}
+        self.scare_character=None
+        self.next_auto_scare=time.monotonic()+30
         self.closing = False
         self.next_scan = time.monotonic()+10
         self.next_image = time.monotonic() + random.uniform(12, 25)
         self.image_paths = image_files(ASSETS)
         self.images = ImageManager(self)
+        self.world=WindowWorld(self)
+        self.desktop=DesktopImages(self)
         self.director = BehaviourDirector(self)
         self.events = EventManager(self)
         self.audio = Audio(app, settings_path().parent / 'audio', ASSETS)
@@ -358,17 +372,7 @@ class Controller:
         self.menu.addAction('Afbeeldingen opruimen', self.clear_images)
         self.menu.addAction('Personages verbergen / tonen', self.toggle_pets)
         self.menu.addAction('Afsluiten (Ctrl+Shift+Q)', app.quit)
-        icon = QPixmap(110, 150)
-        icon.fill(Qt.GlobalColor.transparent)
-        p = QPainter(icon)
-        draw_character(p, 'Freddy')
-        p.end()
-        self.tray = QSystemTrayIcon(QIcon(icon), app)
-        self.tray.setContextMenu(self.menu)
-        self.tray.setToolTip('FNAF Desktop — Ctrl+Shift+Q om af te sluiten')
-        self.tray.show()
-        self.dialog = Settings(self, startup)
-        self.dialog.finished.connect(lambda _: QTimer.singleShot(0, self.show_without_tray) if not self.closing and not QSystemTrayIcon.isSystemTrayAvailable() else None)
+        self.dialog = Settings(self)
         self.emergency = EscapeExit(app, self.quit, interrupt_callback=self.interrupt_effects)
         self.hotkey = Hotkey(self)
         app.installNativeEventFilter(self.hotkey)
@@ -377,7 +381,7 @@ class Controller:
         self.last = time.monotonic()
         self.timer = QTimer(app)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(round(1000/self.settings['fps']))
+        self.timer.start(round(1000/(min(30,self.settings['fps']) if self.settings['performance_mode'] else self.settings['fps'])))
         self.scare_timer = QTimer(app)
         self.scare_timer.setSingleShot(True)
         self.scare_timer.timeout.connect(self.end_scare)
@@ -385,15 +389,10 @@ class Controller:
         app.screenRemoved.connect(lambda _: self.rebuild())
         app.screenAdded.connect(lambda _: self.rebuild())
         self.rebuild()
-        self.open_settings()
         if sys.platform == 'win32' and not self.hotkey.registered:
             self.settings['jumpscares'] = False
             self.dialog.checks['jumpscares'].setChecked(False)
-            QMessageBox.warning(self.dialog, 'Sneltoets niet beschikbaar', 'Ctrl+Shift+Q kon niet worden geregistreerd. Jumpscares zijn uitgeschakeld. Sluit af via instellingen of systeemvak.')
-
-    def show_without_tray(self):
-        if not self.closing:
-            self.dialog.show()
+            QMessageBox.warning(self.dialog, 'Sneltoets niet beschikbaar', 'Ctrl+Shift+Q kon niet worden geregistreerd. Jumpscares zijn uitgeschakeld. Sluit af met ESC 5 seconden of rechtsklik op een personage.')
 
     def interrupt_effects(self):
         self.events.clear()
@@ -446,12 +445,19 @@ class Controller:
             self.end_scare()
         self.events.clear()
         self.images.visibility(not self.paused)
+        for outline in self.director.interactions.outlines.values():outline.setVisible(not self.paused)
         for pet in self.pets:
             pet.setVisible(not self.paused and not self.pets_hidden and pet.state != 'hide')
 
     def tick(self):
         now = time.monotonic()
         dt, self.last = min(.1, now-self.last), now
+        self.world.tick(dt)
+        if not self.paused:self.desktop.tick(now)
+        if now>=self.next_auto_scare:
+            self.next_auto_scare=now+random.uniform(20,40)
+            if self.settings['auto_jumpscares'] and self.pets and not self.pets_hidden and random.random()<self.settings['auto_scare_chance']:
+                self.scare(random.choice(self.pets))
         if now >= self.next_scan:
             self.next_scan = now+10
             self.image_paths = image_files(ASSETS)
@@ -471,13 +477,14 @@ class Controller:
             window.update()
 
     def scare(self, pet):
-        if self.scaring or self.paused or self.emergency.was_pressed or time.monotonic() < self.cooldown_until or not self.settings['jumpscares'] or self.settings['mode'] == 'calm':
+        if self.scaring or self.paused or self.emergency.was_pressed or time.monotonic() < self.cooldown_until or time.monotonic()<self.character_cooldowns.get(pet.name,0) or not self.settings['jumpscares'] or self.settings['mode'] == 'calm':
             return
         if sys.platform == 'win32' and not self.hotkey.registered:
             return
         self.events.clear()
         self.audio.stop()
         self.scaring = True
+        self.scare_character=pet.name
         self.scare_media = scare_source(ASSETS, pet.name)
         video, frame_paths, _ = self.scare_media
         self.active_frames = [safe_pixmap(path, 512) for path in frame_paths[:120]]
@@ -486,6 +493,8 @@ class Controller:
         self.scare_wav = self.audio.resolve(slug+'_scare')
         if video and not (ASSETS/'audio'/(slug+'_scare.wav')).is_file():
             self.scare_wav = None
+        if not video or self.scare_wav:
+            self.audio.prepare(slug+'_scare',self.settings,True)
         self.scare_windows = [Scare(self, pet.name, screen, i == 0) for i, screen in enumerate(self.app.screens())]
         active_windows = self.scare_windows
         def start():
@@ -502,7 +511,8 @@ class Controller:
         if hasattr(self, 'scare_timer'):
             self.scare_timer.stop()
         if self.scaring:
-            self.cooldown_until = time.monotonic()+self.settings['jumpscare_cooldown']
+            self.cooldown_until = time.monotonic()+2
+            self.character_cooldowns[self.scare_character]=time.monotonic()+self.settings['jumpscare_cooldown']
         self.scaring = False
         self.audio.stop()
         for window in self.scare_windows:
@@ -547,7 +557,7 @@ class Controller:
         self.end_scare()
         self.hotkey.close()
         self.app.removeNativeEventFilter(self.hotkey)
-        self.tray.hide()
+        self.desktop.close()
         for window in [*self.pets, *self.popups, self.dialog]:
             window.close()
 
@@ -559,11 +569,34 @@ def main():
     app.setStyleSheet('QDialog,QMenu,QScrollArea,QWidget#SettingsPanel {background:#1c1923;color:#eee} QLabel,QCheckBox {color:#eee} QPushButton {padding:7px;background:#4a354b;color:white} QComboBox,QSpinBox,QDoubleSpinBox {background:#332b3b;color:white} QTabBar::tab {background:#302735;color:#eee;padding:7px} QTabBar::tab:selected {background:#604569} QTabWidget::pane {border:1px solid #51465a}')
     try:
         settings_path().parent.mkdir(parents=True, exist_ok=True)
+        from PySide6.QtNetwork import QLocalServer, QLocalSocket
+        import hashlib
+        server_name='FNAFDesktop-'+hashlib.sha256(str(settings_path()).encode()).hexdigest()[:16]
         lock = QLockFile(str(settings_path().parent / 'app.lock'))
         if not lock.tryLock(100):
-            QMessageBox.information(None, 'FNAF Desktop', 'Er draait al een instantie, of de instellingenmap is niet beschrijfbaar. Controleer het systeemvak.')
+            if '--settings' in sys.argv:
+                socket=QLocalSocket()
+                socket.connectToServer(server_name)
+                if socket.waitForConnected(1500):
+                    socket.write(b'settings');socket.waitForBytesWritten(1000);socket.disconnectFromServer()
+                    return 0
+            QMessageBox.information(None, 'FNAF Desktop', 'Er draait al een instantie. Gebruik Ctrl+Shift+S of rechtsklik op een personage voor instellingen.')
             return 1
         controller = Controller(app)
+        server=QLocalServer(app)
+        server.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)
+        QLocalServer.removeServer(server_name)
+        server.listen(server_name)
+        def accept_settings():
+            client=server.nextPendingConnection()
+            def read_command():
+                if bytes(client.readAll()).strip()==b'settings':controller.open_settings()
+                client.disconnectFromServer()
+            client.readyRead.connect(read_command)
+            client.disconnected.connect(client.deleteLater)
+            if client.bytesAvailable():read_command()
+        server.newConnection.connect(accept_settings)
+        if '--settings' in sys.argv:controller.open_settings()
     except Exception as exc:
         QMessageBox.critical(None, 'FNAF Desktop kan niet starten', str(exc))
         return 1

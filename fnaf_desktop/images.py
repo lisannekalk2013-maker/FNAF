@@ -130,8 +130,8 @@ class ImageManager:
                     self.drop(card)
                     continue
                 side = 1 if pet.direction > 0 else -1
-                tx = pet.posx + (75 if side > 0 else -card.width()+35)
-                ty = pet.posy + 70
+                tx = pet.posx + (pet.width()*.68 if side > 0 else -card.width()+pet.width()*.32)
+                ty = pet.posy + pet.height()*.5
                 alpha = 1-math.exp(-dt*9)
                 card.xf += (tx-card.xf)*alpha
                 card.yf += (ty-card.yf)*alpha

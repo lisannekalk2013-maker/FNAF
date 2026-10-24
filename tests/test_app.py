@@ -54,7 +54,6 @@ def test_click_jumpscare_exclusive_and_recovers(controller):
     QTest.qWait(1850)
     assert not c.scaring
     assert not c.scare_windows
-    assert c.audio.guard.original is None
 
 def test_calm_disabled_silent_and_pause(controller):
     c = controller
@@ -96,35 +95,18 @@ class FakeSound:
         self.plays += 1
 
 @pytest.mark.parametrize('fail', [False, True])
-def test_audio_playback_volume_and_failure_restore(controller, monkeypatch, fail):
-    from fnaf_desktop.core import VolumeGuard
-    from fnaf_desktop import audio
-    class Endpoint:
-        value = .7
-        def GetMasterVolumeLevelScalar(self): return self.value
-        def SetMasterVolumeLevelScalar(self, value, context): self.value = value
-    c = controller
-    sound = FakeSound()
-    sound.fail = fail
-    c.audio.effect = sound
-    endpoint = Endpoint()
-    c.audio.guard = VolumeGuard(endpoint)
-    monkeypatch.setattr(audio.sys, 'platform', 'win32')
-    settings = dict(c.settings, silent=False, system_volume=True)
-    c.audio.play('freddy_scare', settings, True)
-    if fail:
-        assert endpoint.value == .7
-        assert not sound.active
-        assert 'audio device failure' in c.audio.error
+def test_audio_uses_only_app_volume(controller, fail):
+    c=controller
+    sound=FakeSound();sound.fail=fail
+    c.audio.effect=sound
+    c.audio.play('freddy_scare',dict(c.settings,silent=False,volume=.15),True)
+    assert sound.volume == .15
+    assert not hasattr(c.audio,'guard')
+    if fail: assert not sound.active and c.audio.error
     else:
-        assert sound.volume == .15
-        assert endpoint.value == .15
-        c.audio.play('foxy_scare', settings, True)
-        assert sound.plays == 2
-        assert sound.stops == 2
+        assert sound.active
         c.audio.stop()
         assert not sound.active
-        assert endpoint.value == .7
 
 
 def test_random_image_popups_close_and_limit(controller, monkeypatch):
@@ -311,6 +293,7 @@ def test_bonnie_inspects_and_chica_prefers_food(controller):
 @pytest.mark.parametrize('kind', ['static','text','laugh','sprint','blackout','taskbar','stare','theft','golden','encounter'])
 def test_special_events_exclusive_and_cleanup(controller, kind):
     c = controller
+    c.settings['flash_effects']=True
     c.images.create()
     assert c.events.trigger(kind)
     assert not c.events.trigger('static')

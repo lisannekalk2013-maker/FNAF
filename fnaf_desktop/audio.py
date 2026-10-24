@@ -5,12 +5,10 @@ import wave
 from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QSoundEffect
-from .core import VolumeGuard
 
 class Audio:
     def __init__(self, parent, folder, assets):
         self.effect = QSoundEffect(parent)
-        self.guard = VolumeGuard()
         self.error = ''
         self.assets = assets
         self.folder = folder
@@ -28,7 +26,6 @@ class Audio:
                         sample = .3 * envelope * (math.sin(2*math.pi*frequency*t)+.3*math.sin(2*math.pi*frequency*2.03*t))
                         data.append(struct.pack('<h', int(sample*18000)))
                     w.writeframes(b''.join(data))
-        self.effect.playingChanged.connect(self.finished)
         self.effect.statusChanged.connect(self.status_changed)
 
     def status_changed(self):
@@ -36,42 +33,31 @@ class Audio:
             self.error = 'Het audiobestand kan niet worden afgespeeld.'
             self.stop()
 
-    def finished(self):
-        if not self.effect.isPlaying():
-            self.restore()
-
     def resolve(self, name):
         candidates = [self.assets/'audio'/(name+'.wav'), self.assets/(name+'.wav')]
         return next((p for p in candidates if p.is_file()), None)
 
-    def play(self, name, settings, scare=False):
+    def prepare(self, name, settings, scare=False):
         self.stop()
         if settings['silent']:
-            return
+            return False
         try:
             custom = self.resolve(name)
             path = custom if custom else self.folder / ('scare.wav' if scare else 'ambient.wav')
             self.effect.setSource(QUrl.fromLocalFile(str(path.resolve())))
             self.effect.setVolume(settings['volume'] if scare else min(settings.get('ambient_volume', .08), .5))
-            if scare and settings['system_volume'] and sys.platform == 'win32':
-                if self.guard.endpoint is None:
-                    from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-                    from ctypes import cast, POINTER
-                    from comtypes import CLSCTX_ALL
-                    device = AudioUtilities.GetSpeakers()
-                    self.guard.endpoint = cast(device.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None), POINTER(IAudioEndpointVolume))
-                self.guard.begin(settings['volume'])
-            self.effect.play()
+            return True
         except Exception as exc:
             self.error = str(exc)
             self.stop()
+            return False
+
+    def play(self, name, settings, scare=False):
+        if self.prepare(name,settings,scare):
+            try:self.effect.play()
+            except Exception as exc:
+                self.error=str(exc)
+                self.stop()
 
     def stop(self):
         self.effect.stop()
-        self.restore()
-
-    def restore(self):
-        try:
-            self.guard.restore()
-        except Exception as exc:
-            self.error = 'Systeemvolume kon niet worden hersteld: ' + str(exc)

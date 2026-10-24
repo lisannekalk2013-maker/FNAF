@@ -1,27 +1,63 @@
-# FNAF Desktop Chaos 2.0 — media
+# FNAF Desktop V3.0 — vervangbare media
 
-Meegeleverd: gegenereerde fanillustraties, een transparante personage-atlas, 54 PNG-animatie-/gezichtsbestanden, zes camerakaarten, een nieuw donker Golden Freddy-gezicht en synthetische audio. Er zijn geen originele game-opnamen gedownload. Voeg zelf alleen media toe die je mag gebruiken.
+Meegeleverd zijn gegenereerde transparante fanillustraties, acht loopframes per personage, camerakaarten, een Golden Freddy-gezicht en verschillende synthetische geluiden. Er zijn geen originele gameclips of gamegeluiden meegeleverd. De bestaande loopframes zijn pose-/wiegeffecten op illustraties. Voor realistische beweging van afzonderlijke ledematen zijn getekende of gerenderde animatiereeksen nodig.
 
-## Eigen afbeeldingen
+## Afbeeldingen
 
-- `images/random/` en `images/memes/`: PNG, JPG/JPEG, WEBP. Worden automatisch ontdekt, ook in submappen.
-- `popups/`: de bestaande zes camerakaarten blijven ondersteund als standaardbeelden.
-- `images/characters/`: `freddy.png`, `bonnie.png`, `chica.png`, `foxy.png`, `golden_freddy.png`, `springtrap.png` (ook JPG/WEBP). Vervangt de meegeleverde loopillustratie met een wieganimatie.
-- Bestaande per-personage mappen met `walk_00.png`, `walk_01.png`, enzovoort blijven werken; alle frames moeten hetzelfde canvas hebben. `scare.png` is het fallbackgezicht.
-- `images/golden_freddy/golden_freddy_flicker.png`: vervangen door je eigen Golden-referentie.
+- `images/random/` en `images/memes/`: PNG, JPG/JPEG, WEBP, ook in submappen.
+- `popups/`: de bestaande camerakaarten.
+- `images/characters/`: optionele `freddy.png`, `bonnie.png`, `chica.png`, `foxy.png`, `golden_freddy.png`, `springtrap.png` (ook JPG/WEBP). Dit vervangt de oude loopillustratie.
+- `<personage>/walk_00.png` enzovoort: bestaande loopframes; `scare.png` is het fallbackgezicht.
+- `images/golden_freddy/golden_freddy_flicker.png`: het Golden-gezicht.
 
-Nieuwe draagbare beelden worden elke tien seconden gevonden. Voor aangepaste personages: Toepassen of app opnieuw starten. Afbeeldingen worden alleen in tijdelijke vensters getoond; je bestanden worden niet verplaatst, gewijzigd of verwijderd.
+Gebruik gelijke canvassen met transparante achtergrond; zet de voeten telkens op dezelfde baseline. Nieuwe losse afbeeldingen worden iedere tien seconden gevonden; herstart of klik Toepassen voor gewijzigde personages.
 
-## Originele jumpscares
+## Echte karakteranimaties
+
+Zet nieuwe frames in `animations/freddy/`, `animations/bonnie/`, enzovoort. Ondersteunde namen:
+
+```text
+walk_000.png, walk_001.png, ...
+idle_000.png, ...
+run_000.png, ...
+turn_000.png, ...
+sit_000.png, ...
+climb_000.png, ...
+jump_000.png, ...
+trip_000.png, ...
+watch_000.png, ...
+knock_000.png, ...
+interact_000.png, ...
+```
+
+Maximaal 60 frames per reeks, begrensd ingeladen tot 512 pixels. Loopframes volgen de afgelegde afstand; andere reeksen volgen tijd. Zonder passende reeks gebruikt de app de bestaande illustratie met een draai-/zit-/spring-/klimtransformatie en schaduw.
+
+Een spritesheet kan ook. Maak in dezelfde map `sheet.json` en de genoemde PNG:
+
+```json
+{
+  "file": "sheet.png",
+  "width": 110,
+  "height": 150,
+  "clips": {
+    "walk": [0, 1, 2, 3, 4, 5, 6, 7],
+    "idle": [8, 9],
+    "sit": [10, 11],
+    "turn": [12, 13]
+  }
+}
+```
+
+`width`/`height` zijn de frame-afmetingen. Indexen tellen vanaf linksboven, rij voor rij. Maximaal 1024 pixels per framezijde en 16.777.216 pixels per sheet. Frames uit de sheet hebben voorrang op bestanden met dezelfde statenaam. Een ontbrekende/ongeldige sheet valt terug op aanwezige frames.
+
+## Jumpscares en audio
 
 Per personage: `images/jumpscares/freddy/`, `bonnie/`, `chica/`, `foxy/`, `golden_freddy/`, `springtrap/`.
 
-Plaats daar `jumpscare.mp4` of `jumpscare.webm`, of een reeks `frame_000.png`, `frame_001.png`, enzovoort. Video heeft voorrang. Frames worden op 30 fps afgespeeld, maximaal 120, met een begrensde laadresolutie. Clips worden na maximaal circa tien seconden afgebroken. Ontbrekende media gebruiken de bestaande geanimeerde illustratie.
+Plaats `jumpscare.mp4` of `jumpscare.webm`, of `frame_000.png`, `frame_001.png`, enzovoort. Video heeft voorrang. Frames spelen op 30 fps, maximaal 120 frames, tot 512 pixels ingeladen. Video wordt na maximaal circa tien seconden gestopt. Ontbrekende media gebruiken het bestaande bewegende gezicht.
 
-Eigen audio gaat in `audio/`; zie [audio/README.md](audio/README.md) voor exacte namen. Deze bestanden hebben voorrang op de standaard-WAVs in de assets-hoofdmap. Een eigen video speelt zijn ingebouwde geluid, tenzij er een bijbehorende expliciete `*_scare.wav`-override in `audio/` staat. Het veilige appvolume en de stiltemodus gelden altijd.
+Eigen PCM-WAVs gaan in `audio/`: `freddy_scare.wav`, `bonnie_scare.wav`, `chica_scare.wav`, `foxy_scare.wav`, `golden_freddy_scare.wav`, `springtrap_scare.wav`. Overige geluiden: `freddy.wav`, `foxy_sprint.wav`, `camera_static.wav`, `golden_glitch.wav`, `theft.wav`, `ambient.wav`, `chica.wav`.
 
-De meegeleverde synthetische geluiden horen bij ieder personage maar zijn geen originele FNAF-opnamen. Kies in Custom Night een personage en klik Volume testen. Voor echte media moet je zelf bestanden toevoegen.
+Video gebruikt zijn ingebouwde audio tenzij een expliciete bijbehorende WAV in `audio/` staat; dan is videoaudio uit. Het appvolume en mute gelden voor beide. Windows-volume blijft ongewijzigd. Test eigen geluid zacht via instellingen.
 
-## Generators voor ontwikkeling
-
-`python tools/generate_assets.py` bouwt de bestaande sprites/camerakaarten uit `character_atlas.png`. `python tools/generate_sounds.py` bouwt de synthetische standaard-WAVs. Deze overschrijven hun eigen standaardbestanden; gebruik ze niet als je die bestanden handmatig hebt vervangen. In een gebouwde app staat deze hele map onder `_internal/assets`.
+In een gebouwde EXE staat deze map onder `_internal/assets`. Voeg alleen media toe die je mag gebruiken. De ontwikkelscripts `tools/generate_assets.py` en `tools/generate_sounds.py` overschrijven hun eigen standaardbestanden: voer deze niet uit over handmatig vervangen defaults.

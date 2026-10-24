@@ -7,10 +7,10 @@ from .media import image_files
 
 
 class Settings(QDialog):
-    def __init__(self, c, startup_callback):
+    def __init__(self, c):
         super().__init__()
-        self.c, self.startup_callback = c, startup_callback
-        self.setWindowTitle('FNAF Desktop Chaos 2.0 — Custom Night')
+        self.c = c
+        self.setWindowTitle('FNAF Desktop V3.0 — Custom Night')
         self.resize(540, min(760, c.app.primaryScreen().availableGeometry().height()-60))
         outer = QVBoxLayout(self)
         helptext = QLabel('ESC: effect/jumpscare stoppen · ESC 5 seconden: volledig afsluiten\nNoodstop: Ctrl+Shift+Q · Alleen gebruiken met toestemming.')
@@ -44,6 +44,7 @@ class Settings(QDialog):
         for key, text, low, high, integer in [
             ('speed', 'Bewegingssnelheid', .2, 3, False),
             ('animationspeed', 'Animatiesnelheid', .25, 3, False),
+            ('sprite_scale', 'Personagegrootte', .7, 1.8, False),
             ('fps', 'FPS-limiet', 15, 60, True)]:
             self.add_number(forms['Custom Night'], key, text, low, high, integer)
         for key, text, low, high, integer in [
@@ -56,6 +57,7 @@ class Settings(QDialog):
             self.add_number(forms['Afbeeldingen'], key, text, low, high, integer)
         for key, text, low, high, integer in [
             ('event_chance', 'Kans speciale gebeurtenissen (0–1)', 0, 1, False),
+            ('auto_scare_chance', 'Automatische jumpscarekans per 20–40 s', 0, .3, False),
             ('golden_minutes', 'Golden-ontmoeting gemiddeld (minuten)', 15, 60, True),
             ('jumpscare_cooldown', 'Cooldown jumpscares (seconden)', 2, 60, True)]:
             self.add_number(forms['Effecten'], key, text, low, high, integer)
@@ -66,12 +68,15 @@ class Settings(QDialog):
             ('Effecten', 'jumpscares', 'Jumpscares bij klikken'),
             ('Effecten', 'fullscreen', 'Fullscreen jumpscares (uit = kleiner venster)'),
             ('Geluid & systeem', 'silent', 'Volledig stil'),
-            ('Geluid & systeem', 'system_volume', 'Windows-systeemvolume tijdelijk begrenzen'),
-            ('Geluid & systeem', 'startup', 'Opstarten met Windows (expliciete bevestiging)')]:
+            ('Custom Night', 'window_interactions', 'Interactie met Windows-vensters'),
+            ('Custom Night', 'cursor_interactions', 'Cursorinteracties'),
+            ('Custom Night', 'group_activities', 'Samenwerken / groepsactiviteiten'),
+            ('Custom Night', 'performance_mode', 'Prestatiemodus (maximaal 30 FPS)'),
+            ('Afbeeldingen', 'desktop_theft', 'Visuele kopieën van bureaubladafbeeldingen'),
+            ('Effecten', 'auto_jumpscares', 'Automatische jumpscares (standaard uit)'),
+            ('Effecten', 'flash_effects', 'Korte flits-, ruis- en verduisteringseffecten')]:
             box = QCheckBox(text)
             box.setChecked(c.settings[key])
-            if key in ('system_volume', 'startup') and __import__('sys').platform != 'win32':
-                box.setEnabled(False)
             forms[group].addRow(box)
             self.checks[key] = box
         for key, label in [('volume', 'Jumpscarevolume (0–0,50)'), ('ambient_volume', 'Overig geluid (0–0,50)')]:
@@ -116,27 +121,13 @@ class Settings(QDialog):
 
     def apply(self):
         values = self.values()
-        previous = self.c.settings
-        changed_startup = False
         try:
-            if values['startup'] != previous['startup']:
-                if values['startup'] and QMessageBox.question(self, 'Windows opstarten', 'Mag FNAF Desktop zichtbaar starten wanneer je inlogt?') != QMessageBox.StandardButton.Yes:
-                    self.checks['startup'].setChecked(False)
-                    values['startup'] = False
-                if values['startup'] != previous['startup']:
-                    self.startup_callback(values['startup'])
-                    changed_startup = True
             save(settings_path(), values)
             self.c.settings = values
             self.c.audio.stop()
             self.c.rebuild()
-            self.c.timer.setInterval(round(1000/values['fps']))
+            self.c.timer.setInterval(round(1000/(min(30,values['fps']) if values['performance_mode'] else values['fps'])))
             self.c.image_paths = image_files(self.c.assets)
             self.c.events.next_golden = self.c.events.clock+self.c.events.golden_delay()
         except Exception as exc:
-            if changed_startup:
-                try:
-                    self.startup_callback(previous['startup'])
-                except OSError:
-                    pass
             QMessageBox.warning(self, 'Instellingen niet opgeslagen', str(exc))

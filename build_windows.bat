@@ -21,12 +21,12 @@ if errorlevel 1 goto wrong_venv
 if errorlevel 1 goto failed
 .venv-windows\Scripts\python.exe -m pytest -q
 if errorlevel 1 goto failed
-.venv-windows\Scripts\python.exe -m PyInstaller --noconfirm --clean --windowed --onedir --name FNAFDesktop --add-data "assets;assets" --add-data "settings.json;." --add-data "config.json;." --hidden-import pycaw.pycaw --hidden-import comtypes.client run.py
+.venv-windows\Scripts\python.exe -m PyInstaller --noconfirm --clean --windowed --onedir --name FNAFDesktop --add-data "assets;assets" --add-data "settings.json;." --add-data "config.json;." --hidden-import comtypes.client run.py
 if errorlevel 1 goto failed
 .venv-windows\Scripts\python.exe tools\package_windows.py
 if errorlevel 1 goto failed
 echo.
-echo ZIP: dist\FNAFDesktop-Chaos-2.0-Windows.zip
+echo ZIP: dist\FNAFDesktop-V3.0-Windows.zip
 echo Gereed: dist\FNAFDesktop\FNAFDesktop.exe
 echo Bewaar de hele map FNAFDesktop, inclusief _internal.
 if /i not "%~1"=="--ci" pause

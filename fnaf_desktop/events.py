@@ -82,6 +82,7 @@ class EventManager:
     def trigger(self, kind):
         if self.kind or self.c.pets_hidden or self.c.closing or self.c.paused or self.c.scaring or not self.c.settings['special_events']:
             return False
+        if kind in ('golden','blackout','static','taskbar') and not self.c.settings['flash_effects']:return False
         if kind not in (*self.KINDS, 'encounter'):
             return False
         if kind in ('golden', 'encounter') and (self.c.settings['activity']['Golden Freddy'] == 0 or 'Golden Freddy' not in self.c.settings['characters']):
@@ -91,6 +92,9 @@ class EventManager:
         if kind in ('static', 'text', 'blackout', 'taskbar', 'golden', 'encounter'):
             self.windows = [EffectOverlay(self, kind, s) for s in self.c.app.screens()]
         if kind in ('golden', 'encounter'):
+            if self.c.settings['window_interactions']:
+                pet=next((p for p in self.c.pets if p.name=='Golden Freddy'),None)
+                if pet and pet not in self.c.director.jobs:self.c.director.interactions.window_job(pet,'behind')
             if self.c.images.cards:
                 self.c.images.glitch(random.choice(self.c.images.cards))
             self.c.audio.play('golden_glitch', self.c.settings)
@@ -132,7 +136,8 @@ class EventManager:
         elif self.clock >= self.next_event:
             self.next_event = self.clock+random.uniform(15, 35)*(2 if self.c.settings['mode'] == 'calm' else 1)
             if random.random() < self.c.settings['event_chance']:
-                self.trigger(random.choice(self.KINDS))
+                kind=random.choice(self.KINDS)
+                if kind!='golden' or random.random()<min(1,22/self.c.settings['golden_minutes']):self.trigger(kind)
 
     def clear(self):
         for window in self.windows:

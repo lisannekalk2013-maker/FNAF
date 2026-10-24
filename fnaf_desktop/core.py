@@ -6,10 +6,12 @@ from pathlib import Path
 NAMES = ('Freddy', 'Bonnie', 'Chica', 'Foxy', 'Golden Freddy', 'Springtrap')
 DEFAULT = dict(characters=list(NAMES), count=6, speed=1.0, event_chance=.3,
     jumpscares=True, volume=.15, ambient_volume=.08, silent=False, mode='normal',
-    startup=False, system_volume=False, image_popups=True, activity={name: 10 for name in NAMES},
+    image_popups=True, activity={name: 10 for name in NAMES},
     image_chance=.35, drag_chance=.45, theft_chance=.35, chase_chance=.4,
     golden_minutes=22, special_events=True, reduced_effects=True, fullscreen=True,
-    max_images=5, image_lifetime=45, fps=30, jumpscare_cooldown=8, animationspeed=1.0)
+    max_images=5, image_lifetime=45, fps=60, jumpscare_cooldown=8, animationspeed=1.0, window_interactions=True, desktop_theft=False,
+    cursor_interactions=True, group_activities=True, flash_effects=False, performance_mode=False,
+    auto_jumpscares=False, auto_scare_chance=.02, sprite_scale=1.0)
 
 
 def normalize(raw):
@@ -20,7 +22,7 @@ def normalize(raw):
     limits = dict(count=(1, 12), speed=(.2, 3), event_chance=(0, 1), volume=(0, .5), ambient_volume=(0, .5),
         image_chance=(0, 1), drag_chance=(0, 1), theft_chance=(0, 1), chase_chance=(0, 1),
         golden_minutes=(15, 60), max_images=(1, 12), image_lifetime=(10, 300), fps=(15, 60),
-        jumpscare_cooldown=(2, 60), animationspeed=(.25, 3))
+        jumpscare_cooldown=(2, 60), animationspeed=(.25, 3), auto_scare_chance=(0, .3), sprite_scale=(.7, 1.8))
     for key, (low, high) in limits.items():
         try:
             value = float(s[key])
@@ -64,24 +66,6 @@ def save(path, settings):
     temp = path.with_suffix('.tmp')
     temp.write_text(json.dumps(normalize(settings), indent=2), encoding='utf8')
     temp.replace(path)
-
-class VolumeGuard:
-    """Only lower endpoint volume; restore it even after playback failure."""
-    def __init__(self, endpoint=None):
-        self.endpoint = endpoint
-        self.original = None
-
-    def begin(self, maximum):
-        self.restore()
-        if self.endpoint is not None:
-            self.original = self.endpoint.GetMasterVolumeLevelScalar()
-            self.endpoint.SetMasterVolumeLevelScalar(min(self.original, max(0, min(.5, maximum))), None)
-
-    def restore(self):
-        if self.original is not None:
-            self.endpoint.SetMasterVolumeLevelScalar(self.original, None)
-            self.original = None
-
 
 class HoldToQuit:
     """Track a continuous hold without counting key-repeat events."""

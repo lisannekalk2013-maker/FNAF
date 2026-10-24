@@ -23,7 +23,7 @@ def test_windows_zip_contains_whole_directory(tmp_path):
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_bytes(b'test fixture, not a real executable')
     packager.package()
-    with ZipFile(tmp_path/'dist'/'FNAFDesktop-Chaos-2.0-Windows.zip') as archive:
+    with ZipFile(tmp_path/'dist'/'FNAFDesktop-V3.0-Windows.zip') as archive:
         assert archive.testzip() is None
         assert all('FNAFDesktop/'+name in archive.namelist() for name in required)
         assert 'FNAFDesktop/START_HIER.txt' in archive.namelist()

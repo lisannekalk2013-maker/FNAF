@@ -15,8 +15,6 @@
   "ambient_volume": 0.08,
   "silent": false,
   "mode": "normal",
-  "startup": false,
-  "system_volume": false,
   "image_popups": true,
   "activity": {
     "Freddy": 10,
@@ -36,7 +34,16 @@
   "fullscreen": true,
   "max_images": 5,
   "image_lifetime": 45.0,
-  "fps": 30,
+  "fps": 60,
   "jumpscare_cooldown": 8.0,
-  "animationspeed": 1.0
+  "animationspeed": 1.0,
+  "window_interactions": true,
+  "desktop_theft": false,
+  "cursor_interactions": true,
+  "group_activities": true,
+  "flash_effects": false,
+  "performance_mode": false,
+  "auto_jumpscares": false,
+  "auto_scare_chance": 0.02,
+  "sprite_scale": 1.0
 }

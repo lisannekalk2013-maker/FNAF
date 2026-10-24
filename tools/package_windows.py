@@ -12,8 +12,9 @@ def package():
     for name in required:
         if not (folder/name).is_file():
             raise FileNotFoundError('Windows-build onvolledig: '+name)
-    (folder/'START_HIER.txt').write_text('Start FNAFDesktop.exe. Bewaar de hele map inclusief _internal.\nESC stopt een effect. ESC 5 seconden of Ctrl+Shift+Q sluit de app volledig.\nCustom Night opent bij het starten. Geen Python-installatie nodig voor deze EXE.\nEigen media: _internal/assets; instructies staan in _internal/assets/README.md.\n', encoding='utf8')
-    output = ROOT/'dist'/'FNAFDesktop-Chaos-2.0-Windows.zip'
+    (folder/'START_HIER.txt').write_text('Start FNAFDesktop.exe. Bewaar de hele map inclusief _internal.\nESC stopt een effect. ESC 5 seconden of Ctrl+Shift+Q sluit de app volledig.\nInstellingen: Ctrl+Shift+S, rechtsklik op een personage of Instellingen.bat. Geen Python-installatie nodig voor deze EXE.\nEigen media: _internal/assets; instructies staan in _internal/assets/README.md.\n', encoding='utf8')
+    (folder/'Instellingen.bat').write_text('@echo off\ncd /d "%~dp0"\nstart "" "FNAFDesktop.exe" --settings\n',encoding='utf8')
+    output = ROOT/'dist'/'FNAFDesktop-V3.0-Windows.zip'
     files = sorted(p for p in folder.rglob('*') if p.is_file())
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:
         for path in files:
